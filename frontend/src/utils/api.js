@@ -1,0 +1,104 @@
+import axios from 'axios';
+
+// Using relative paths — Vite proxy forwards /api → localhost:5000
+// This works in dev (via proxy) and in production (same-origin deployment).
+const API_BASE_URL = '/api/v1';
+
+const api = axios.create({
+    baseURL: API_BASE_URL,
+    withCredentials: true, // Crucial for sending/receiving HTTP-Only cookies
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
+// Automatically attach token from localStorage to every request
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('simplish_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+// Automatically handle expired tokens (401 Unauthorized)
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Check if we are already logging out to prevent loops
+            if (localStorage.getItem('simplish_token')) {
+                console.warn('Token expired or invalid. Logging out automatically.');
+                localStorage.removeItem('simplish_token');
+                localStorage.removeItem('simplish_user');
+                window.location.href = '/'; // Force a full reload to reset React state
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+export const lessonApi = {
+    getAll: (params) => api.get('/lessons', { params }),
+    getMyProgress: (params) => api.get('/lessons/my-progress', { params }),
+    getOne: (id) => api.get(`/lessons/${id}`),
+    upload: (formData) => api.post('/lessons/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    update: (id, formData) => api.put(`/lessons/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    delete: (id) => api.delete(`/lessons/${id}`),
+    updateProgress: (id, data) => api.post(`/lessons/${id}/progress`, data)
+};
+
+export const assessmentApi = {
+    getByLesson: (lessonId) => api.get(`/assessments/lesson/${lessonId}`),
+    upsertQuestions: (lessonId, questions) => api.post(`/assessments/lesson/${lessonId}/questions`, { questions }),
+    submit: (formData) => api.post('/assessments/submit', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    processMedia: (formData) => api.post('/assessments/process-media', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+};
+
+export const authApi = {
+    login: (credentials) => api.post('/auth/login', credentials),
+    register: (userData) => api.post('/auth/register', userData),
+    getProfile: (token) => api.get('/auth/profile', { headers: { Authorization: `Bearer ${token}` } }),
+    updateProfile: (formData, token) => api.put('/auth/profile', formData, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+        }
+    }),
+    getAllUsers: (params = {}) => api.get('/auth/users', { params }),
+    updateRole: (id, role) => api.put(`/auth/users/${id}/role`, { role }),
+    updateStatus: (id, status) => api.put(`/auth/users/${id}/status`, { status }),
+    deleteUser: (id) => api.delete(`/auth/users/${id}`),
+    deleteMe: () => api.delete('/auth/me'),
+    logout: () => api.post('/auth/logout'),
+    getSystemLogs: () => api.get('/auth/logs')
+};
+
+export const placementApi = {
+    getQuestions: () => api.get('/placement/questions'),
+    submit: (answers) => api.post('/placement/submit', { answers }),
+    getLeaderboard: () => api.get('/placement/leaderboard'),
+};
+
+export const reportApi = {
+    getSummary: () => api.get('/reports/summary'),
+    getActivity: () => api.get('/reports/activity'),
+};
+
+
+
+export const paymentApi = {
+    createOrder: (data) => api.post('/payments/create-order', data),
+    verifyPayment: (data) => api.post('/payments/verify-payment', data),
+    getHistory: () => api.get('/payments/history'),
+};
+
+export default api;

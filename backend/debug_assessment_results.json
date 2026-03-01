@@ -1,0 +1,173 @@
+{
+  "assessments": [
+    {
+      "id": "d12c6f87-cb1d-4a07-8c3b-b984b5445a39",
+      "lesson_id": "30806802-c3ca-42db-87fb-a02a77338516",
+      "title": "Assessment",
+      "created_at": "2026-02-27T06:43:10.043285+00:00"
+    },
+    {
+      "id": "fed10491-15e4-426b-a417-11cffb79cdbf",
+      "lesson_id": "e10e8fc6-016f-4d6d-94b0-8ffe46a78e44",
+      "title": "Assessment",
+      "created_at": "2026-02-27T11:00:55.432901+00:00"
+    },
+    {
+      "id": "2ef6241d-f402-4585-b532-d470bafdad5f",
+      "lesson_id": "9e528ed0-8485-45d4-bdff-469b86f1aff3",
+      "title": "Assessment",
+      "created_at": "2026-02-27T11:01:27.814685+00:00"
+    },
+    {
+      "id": "642ce0c0-41e8-4c40-b848-76366ac78721",
+      "lesson_id": "8fda69b8-585b-427d-92c3-4ebd7e3b0b95",
+      "title": "Assessment",
+      "created_at": "2026-02-27T14:13:35.785786+00:00"
+    },
+    {
+      "id": "0eb34cdd-1ff3-4123-a3d0-82e6fdf887fb",
+      "lesson_id": "30e416c6-eb76-474a-a70f-254c9227b4c8",
+      "title": "Assessment",
+      "created_at": "2026-02-27T11:00:34.606663+00:00"
+    }
+  ],
+  "assessmentsError": null,
+  "questions": [
+    {
+      "id": "eac6a269-ea30-4675-92ae-591e937f3e26",
+      "assessment_id": "d12c6f87-cb1d-4a07-8c3b-b984b5445a39",
+      "question_text": "HI",
+      "question_type": "Text",
+      "correct_answer": "Hi",
+      "options": null,
+      "points": 10,
+      "explanation": "Hi",
+      "created_at": "2026-02-27T10:59:56.635554+00:00"
+    },
+    {
+      "id": "963bb768-5cc0-4f84-95b0-a502bb7aba9b",
+      "assessment_id": "fed10491-15e4-426b-a417-11cffb79cdbf",
+      "question_text": "C",
+      "question_type": "Text",
+      "correct_answer": "C",
+      "options": null,
+      "points": 10,
+      "explanation": "C",
+      "created_at": "2026-02-27T11:00:55.564506+00:00"
+    },
+    {
+      "id": "1437b488-7406-4197-9ea5-e3f8a20cea7d",
+      "assessment_id": "2ef6241d-f402-4585-b532-d470bafdad5f",
+      "question_text": "D",
+      "question_type": "Text",
+      "correct_answer": "D",
+      "options": null,
+      "points": 10,
+      "explanation": "D",
+      "created_at": "2026-02-27T11:01:27.929143+00:00"
+    },
+    {
+      "id": "00536472-f2d9-4b57-864b-fa76b2dae7cb",
+      "assessment_id": "642ce0c0-41e8-4c40-b848-76366ac78721",
+      "question_text": "A",
+      "question_type": "Text",
+      "correct_answer": "A",
+      "options": null,
+      "points": 10,
+      "explanation": "A",
+      "created_at": "2026-02-27T14:14:05.861996+00:00"
+    },
+    {
+      "id": "290f0d85-ac20-4b33-8342-90bb830b8b8c",
+      "assessment_id": "0eb34cdd-1ff3-4123-a3d0-82e6fdf887fb",
+      "question_text": "Which word means 'ಅವಳು' in English?",
+      "question_type": "MCQ",
+      "correct_answer": "She",
+      "options": [
+        "He",
+        "It",
+        "They",
+        "She"
+      ],
+      "points": 10,
+      "explanation": "'She' ಎಂದರೆ ಸ್ತ್ರೀಲಿಂಗ (ಅವಳು) ಎಂದು ಅರ್ಥ.",
+      "created_at": "2026-02-28T03:50:20.938972+00:00"
+    },
+    {
+      "id": "d885a593-a8e9-400e-851b-8bb900e6da54",
+      "assessment_id": "0eb34cdd-1ff3-4123-a3d0-82e6fdf887fb",
+      "question_text": "Fill in the blank: He ___ a teacher.",
+      "question_type": "MCQ",
+      "correct_answer": "is",
+      "options": [
+        "am",
+        "are",
+        "is",
+        "be"
+      ],
+      "points": 10,
+      "explanation": "He/She/It ಜೊತೆಗೆ 'is' ಬಳಸಲಾಗುತ್ತದೆ.",
+      "created_at": "2026-02-28T03:50:20.938972+00:00"
+    },
+    {
+      "id": "90fcf512-bb0e-4287-b601-f38e6da10639",
+      "assessment_id": "0eb34cdd-1ff3-4123-a3d0-82e6fdf887fb",
+      "question_text": "Translate: \"You are happy.\"",
+      "question_type": "MCQ",
+      "correct_answer": "ನೀವು ಸಂತೋಷವಾಗಿದ್ದೀರಿ",
+      "options": [
+        "ನೀವು ದುಃಖವಾಗಿದ್ದೀರಿ",
+        "ನೀವು ಸಂತೋಷವಾಗಿದ್ದೀರಿ",
+        "ನಾನು ಸಂತೋಷವಾಗಿದ್ದೇನೆ",
+        "ಅವರು ಸಂತೋಷವಾಗಿದ್ದಾರೆ"
+      ],
+      "points": 10,
+      "explanation": "'Happy' ಎಂದರೆ ಸಂತೋಷ; 'You' ಎಂದರೆ ನೀವು.",
+      "created_at": "2026-02-28T03:50:20.938972+00:00"
+    },
+    {
+      "id": "ad39d703-9a34-485d-80fb-e0f2fbd7c55a",
+      "assessment_id": "0eb34cdd-1ff3-4123-a3d0-82e6fdf887fb",
+      "question_text": "Choose the correct pair:",
+      "question_type": "MCQ",
+      "correct_answer": "We are",
+      "options": [
+        "I is",
+        "He are",
+        "They is",
+        "We are"
+      ],
+      "points": 10,
+      "explanation": "'We' ಬಹುವಚನವಾದ್ದರಿಂದ 'are' ಬಳಸಬೇಕು.",
+      "created_at": "2026-02-28T03:50:20.938972+00:00"
+    }
+  ],
+  "questionsError": null,
+  "lessons": [
+    {
+      "id": "e10e8fc6-016f-4d6d-94b0-8ffe46a78e44",
+      "title": "3"
+    },
+    {
+      "id": "9e528ed0-8485-45d4-bdff-469b86f1aff3",
+      "title": "T A"
+    },
+    {
+      "id": "e1e446cb-8869-4427-9b86-f1885a16c762",
+      "title": "E"
+    },
+    {
+      "id": "8fda69b8-585b-427d-92c3-4ebd7e3b0b95",
+      "title": "Unit 1"
+    },
+    {
+      "id": "30e416c6-eb76-474a-a70f-254c9227b4c8",
+      "title": "Unit 2"
+    },
+    {
+      "id": "30806802-c3ca-42db-87fb-a02a77338516",
+      "title": "Unit 1: Introducing Yourself (ಪಾಠ 1: ನಿಮ್ಮನ್ನು ಪರಿಚಯಿಸಿಕೊಳ್ಳುವುದು)"
+    }
+  ],
+  "lessonsError": null
+}

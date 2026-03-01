@@ -1,0 +1,153 @@
+{
+    "auth": [
+        {
+            "id": "AUTH_REG_FAIL_MISSING",
+            "name": "Register Fail - Missing Fields",
+            "input": {
+                "fullName": "Test User",
+                "password": "password123"
+            },
+            "expectedStatus": 400,
+            "expectedBody": {
+                "message": "Full name, password, and either email or phone are required"
+            }
+        },
+        {
+            "id": "AUTH_REG_SUCCESS",
+            "name": "Register Success",
+            "input": {
+                "fullName": "Jane Doe",
+                "phone": "+919876543210",
+                "password": "SecurePassword123"
+            },
+            "expectedStatus": 201,
+            "matchPath": "message",
+            "expectedValue": "Registration successful."
+        },
+        {
+            "id": "AUTH_LOGIN_FAIL",
+            "name": "Login Fail - Invalid Credentials",
+            "input": {
+                "email": "wrong@example.com",
+                "password": "wrongpassword"
+            },
+            "expectedStatus": 401
+        }
+    ],
+    "lessons": [
+        {
+            "id": "LESSON_CREATE_FAIL",
+            "name": "Create Lesson Fail - No Media",
+            "input": {
+                "title": "Incomplete Lesson",
+                "level": "Basic"
+            },
+            "expectedStatus": 400
+        },
+        {
+            "id": "LESSON_GET_ALL",
+            "name": "Fetch All Lessons",
+            "input": {},
+            "expectedStatus": 200,
+            "matchPath": "lessons.length",
+            "comparison": "greaterThan",
+            "expectedValue": -1
+        }
+    ],
+    "assessments": [
+        {
+            "id": "ASSESSMENT_SCORING_FULL",
+            "name": "Scoring - All Correct",
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "MCQ",
+                    "correct_answer": "OptionA",
+                    "points": 10
+                },
+                {
+                    "id": "q2",
+                    "question_type": "Text",
+                    "correct_answer": "Bengaluru",
+                    "points": 10
+                }
+            ],
+            "answers": {
+                "q1": "OptionA",
+                "q2": "bengaluru"
+            },
+            "expectedScore": 100,
+            "expectedPassed": true
+        },
+        {
+            "id": "ASSESSMENT_SCORING_PARTIAL",
+            "name": "Scoring - Partial Correct",
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "MCQ",
+                    "correct_answer": "OptionA",
+                    "points": 10
+                },
+                {
+                    "id": "q2",
+                    "question_type": "Text",
+                    "correct_answer": "Bengaluru",
+                    "points": 10
+                }
+            ],
+            "answers": {
+                "q1": "OptionA",
+                "q2": "Wrong"
+            },
+            "expectedScore": 50,
+            "expectedPassed": false
+        },
+        {
+            "id": "ASSESSMENT_SCORING_OCR",
+            "name": "Scoring - OCR/Voice Case Trim",
+            "questions": [
+                {
+                    "id": "v1",
+                    "question_type": "Voice",
+                    "correct_answer": "Hello",
+                    "points": 10
+                }
+            ],
+            "answers": {
+                "v1": "  hElLo  "
+            },
+            "expectedScore": 100
+        }
+    ],
+    "placement": [
+        {
+            "id": "PLACEMENT_GET_QS",
+            "name": "Fetch Placement Questions",
+            "expectedStatus": 200,
+            "minLength": 4
+        },
+        {
+            "id": "PLACEMENT_SUBMIT_BASIC",
+            "name": "Placement Submit - Basic Level",
+            "mockQuestions": [
+                {
+                    "id": "p1",
+                    "difficulty_level": "Basic",
+                    "correct_answer": "A"
+                },
+                {
+                    "id": "p2",
+                    "difficulty_level": "Intermediate",
+                    "correct_answer": "B"
+                }
+            ],
+            "answers": {
+                "p1": "A",
+                "p2": "Wrong"
+            },
+            "expectedLevel": "Basic",
+            "expectedScore": 50
+        }
+    ]
+}
