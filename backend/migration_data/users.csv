@@ -1,7 +1,0 @@
-id,full_name,email,password_hash,role,streak_count,last_login_at,created_at,updated_at,onboarding_completed,current_level
-"0acf8c43-a059-4efa-a0c0-7f267f087f3a","Simpli Admin (updated)","simpli@admin.com","$2b$10$CfiGFGa5JXjZ4nEU2edoEOAOvMMybKz6oBHwhplKSJwGW3m7ardgy","admin",0,,"""2026-02-22T09:19:16.120Z""","""2026-02-22T09:19:16.120Z""",false,
-"7b7f7da0-870e-42ea-a390-40c077313e45","KP","a@b.com","$2b$10$RxviXPPyiXX.Dlpiza/sXesIukpQCMtr3/yL8UnTj9wpnW1ZGKcnK","user",0,,"""2026-02-22T09:06:22.559Z""","""2026-02-22T09:06:22.559Z""",false,
-"e4a8326f-260c-47ba-a9de-983447a5400f","New user","b@c.com","$2b$10$OwG1jWZNSJPc2eUggb2R3uHVpOKRWs/qTHuKNIRK59Y/QMaN4C09W","user",0,,"""2026-02-22T10:45:40.716Z""","""2026-02-22T10:45:40.716Z""",false,
-"f0000000-0000-0000-0000-000000000000","Demo User","demo@example.com","mock_hash","user",13,,"""2026-02-14T07:28:24.607Z""","""2026-02-14T07:28:24.607Z""",false,
-"09117b7e-a60d-4acc-bb3f-3ac5fdc880ab","Test User 2","testuser2@example.com","$2b$10$SfhCKV5H6ggpaA1N33bk3.i7AMlvfnYaMLPLMOq8I2Q1T8AuhFMy6","user",0,,"""2026-02-25T08:43:34.942Z""","""2026-02-25T08:43:34.942Z""",true,"Advanced"
-"22e01f72-4acc-4b89-aec1-bdfc646e8491","Test User 3","testuser3@example.com","$2b$10$mHmE01hEkQJjhdJ66Ju3X.qxzRD5YZI71..ZBa0MQScPeB0yZxble","user",0,,"""2026-02-25T08:49:40.448Z""","""2026-02-25T08:49:40.448Z""",true,"Advanced"
