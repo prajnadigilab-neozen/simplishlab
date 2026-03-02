@@ -4,11 +4,12 @@ const fs = require('fs');
 const path = require('path');
 
 exports.uploadLesson = async (req, res) => {
-    const { title, description, level, displayOrder } = req.body;
+    const { title, description, level, displayOrder, content } = req.body;
 
     const pdfUrl = req.files?.pdf ? `/uploads/${req.files.pdf[0].filename}` : req.body.pdfUrl || null;
     const audioUrl = req.files?.audio ? `/uploads/${req.files.audio[0].filename}` : req.body.audioUrl || null;
     const videoUrl = req.files?.video ? `/uploads/${req.files.video[0].filename}` : req.body.videoUrl || null;
+    const transcription = req.body.transcription || null;
 
     if (!title || !level) {
         return res.status(400).json({ message: 'Title and level are strictly required.' });
@@ -26,6 +27,8 @@ exports.uploadLesson = async (req, res) => {
                 pdf_url: pdfUrl,
                 audio_url: audioUrl,
                 video_url: videoUrl,
+                transcription: transcription,
+                content: content ? (typeof content === 'string' ? JSON.parse(content) : content) : {},
                 display_order: parseInt(displayOrder) || 0
             }])
             .select()
@@ -39,7 +42,10 @@ exports.uploadLesson = async (req, res) => {
         });
     } catch (error) {
         console.error("Lesson Upload Error:", error);
-        res.status(500).json({ message: 'Error creating lesson' });
+        res.status(500).json({
+            message: 'Error creating lesson',
+            details: error.message || error.details || 'Unknown database error'
+        });
     }
 };
 
@@ -147,7 +153,7 @@ exports.getMyLessonsProgress = async (req, res) => {
 
 exports.updateLesson = async (req, res) => {
     const { id } = req.params;
-    const { title, description, level, displayOrder } = req.body;
+    const { title, description, level, displayOrder, content } = req.body;
 
     console.log(`--- Update Lesson Attempt ---`);
     console.log(`ID: ${id}`);
@@ -161,6 +167,9 @@ exports.updateLesson = async (req, res) => {
     if (audioUrl === 'undefined' || audioUrl === '') audioUrl = null;
     if (videoUrl === 'undefined' || videoUrl === '') videoUrl = null;
 
+    let transcription = req.body.transcription;
+    if (transcription === 'undefined' || transcription === '') transcription = null;
+
     try {
         const updatePayload = {
             title,
@@ -169,9 +178,14 @@ exports.updateLesson = async (req, res) => {
             display_order: parseInt(displayOrder) || 0
         };
 
+        if (content) {
+            updatePayload.content = typeof content === 'string' ? JSON.parse(content) : content;
+        }
+
         if (pdfUrl !== undefined) updatePayload.pdf_url = pdfUrl;
         if (audioUrl !== undefined) updatePayload.audio_url = audioUrl;
         if (videoUrl !== undefined) updatePayload.video_url = videoUrl;
+        if (transcription !== undefined) updatePayload.transcription = transcription;
 
         console.log(`Payload for Supabase:`, updatePayload);
 

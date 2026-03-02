@@ -101,4 +101,8 @@ export const paymentApi = {
     getHistory: () => api.get('/payments/history'),
 };
 
+export const aiApi = {
+    generateLessonContent: (data) => api.post('/ai/generate-lesson', data),
+};
+
 export default api;

@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, CheckCircle2, XCircle, Loader2, ArrowLeft, Plus, HelpCircle, Edit, Trash2 } from 'lucide-react';
-import { lessonApi, assessmentApi } from '../utils/api';
+import { Upload, CheckCircle2, XCircle, Loader2, ArrowLeft, Plus, HelpCircle, Edit, Trash2, Wand2 } from 'lucide-react';
+import { lessonApi, assessmentApi, aiApi } from '../utils/api';
 
 const LessonCreate = ({ lesson, onBack }) => {
-    const [currentTab, setCurrentTab] = useState('details'); // 'details', 'media', 'questions'
+    const [currentTab, setCurrentTab] = useState('ai-gen'); // 'ai-gen', 'details', 'study', 'reading', 'vocabulary', 'media', 'questions'
     const [formData, setFormData] = useState({
         title: '',
         level: 'Basic',
         description: '',
-        displayOrder: 1
+        transcription: '',
+        displayOrder: 1,
+        content: null
     });
+
+    // Sub-states for various sections
+    // Sub-states for various sections as raw JSON strings for easier editing
+    const [studyContentRaw, setStudyContentRaw] = useState('[]');
+    const [evolutionContentRaw, setEvolutionContentRaw] = useState('[]');
+    const [readingContentRaw, setReadingContentRaw] = useState('[]');
+    const [vocabularyContentRaw, setVocabularyContentRaw] = useState('[]');
     const [files, setFiles] = useState({ pdf: null, audio: null, video: null });
     const [status, setStatus] = useState('idle');
     const [message, setMessage] = useState('');
@@ -19,21 +28,41 @@ const LessonCreate = ({ lesson, onBack }) => {
     const [newQuestion, setNewQuestion] = useState({ text: '', type: 'Text', correct_answer: '', points: 10, options: '', explanation: '' });
     const [editingQuestionIdx, setEditingQuestionIdx] = useState(null);
 
+    // AI Generation State
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [aiEngine, setAiEngine] = useState('gemini-2.5-flash');
+    const [generating, setGenerating] = useState(false);
+    const [generatedContentPreview, setGeneratedContentPreview] = useState('');
+
     useEffect(() => {
         // Reset form state whenever the lesson prop changes
         setStatus('idle');
         setMessage('');
-        setFiles({ pdf: null, audio: null, video: null });
         setQuestions([]);
-        setCurrentTab('details');
+        setCurrentTab('ai-gen');
 
         if (lesson) {
             setFormData({
                 title: lesson.title || '',
                 level: lesson.level || 'Basic',
                 description: lesson.description || '',
-                displayOrder: lesson.display_order || 1
+                transcription: lesson.transcription || '',
+                displayOrder: lesson.display_order || 1,
+                content: lesson.content || null
             });
+            // Populate sub-states
+            const content = lesson.content || {};
+            setStudyContentRaw(JSON.stringify(content.logicContent || [], null, 2));
+            setEvolutionContentRaw(JSON.stringify(content.evolutionContent || [], null, 2));
+            setReadingContentRaw(JSON.stringify(content.readingContent || [], null, 2));
+            setVocabularyContentRaw(JSON.stringify(content.vocabularyContent || [], null, 2));
+            setQuestions(lesson.questions || content.milestoneTest || []);
+            setFiles({ pdf: null, audio: null, video: null });
+            if (lesson.content) {
+                setGeneratedContentPreview(JSON.stringify(lesson.content, null, 2));
+            } else {
+                setGeneratedContentPreview('');
+            }
             fetchQuestions(lesson.id);
         } else {
             // Reset to blank form for new lesson
@@ -41,8 +70,17 @@ const LessonCreate = ({ lesson, onBack }) => {
                 title: '',
                 level: 'Basic',
                 description: '',
-                displayOrder: 1
+                transcription: '',
+                displayOrder: 1,
+                content: null
             });
+            setGeneratedContentPreview('');
+            setAiPrompt('');
+            setStudyContentRaw('[]');
+            setEvolutionContentRaw('[]');
+            setReadingContentRaw('[]');
+            setVocabularyContentRaw('[]');
+            setFiles({ pdf: null, audio: null, video: null });
         }
     }, [lesson]);
 
@@ -110,21 +148,41 @@ const LessonCreate = ({ lesson, onBack }) => {
         setStatus('loading');
 
         try {
+            // 0. Parse and Bundle all content sections
+            let finalLogic, finalEvolution, finalReading, finalVocabulary;
+            try {
+                finalLogic = JSON.parse(studyContentRaw);
+                finalEvolution = JSON.parse(evolutionContentRaw);
+                finalReading = JSON.parse(readingContentRaw);
+                finalVocabulary = JSON.parse(vocabularyContentRaw);
+            } catch (pErr) {
+                throw new Error("One or more content sections contain invalid JSON. Please check Study, Reading, or Vocabulary tabs.");
+            }
+
+            const lessonContent = {
+                logicContent: finalLogic,
+                evolutionContent: finalEvolution,
+                readingContent: finalReading,
+                vocabularyContent: finalVocabulary,
+                milestoneTest: questions
+            };
+
             // 1. Save/Update Lesson
             const data = new FormData();
-            Object.keys(formData).forEach(key => data.append(key, formData[key]));
+            data.append('title', formData.title);
+            data.append('level', formData.level);
+            data.append('description', formData.description);
+            data.append('display_order', formData.displayOrder);
+            data.append('transcription', formData.transcription);
+            data.append('content', JSON.stringify(lessonContent));
+
             if (files.pdf) data.append('pdf', files.pdf);
             if (files.audio) data.append('audio', files.audio);
             if (files.video) data.append('video', files.video);
 
+            let lessonId;
             if (lesson) {
-                if (lesson.pdf_url) data.append('pdfUrl', lesson.pdf_url);
-                if (lesson.audio_url) data.append('audioUrl', lesson.audio_url);
-                if (lesson.video_url) data.append('videoUrl', lesson.video_url);
-            }
-
-            let lessonId = lesson?.id;
-            if (lesson) {
+                lessonId = lesson.id;
                 await lessonApi.update(lesson.id, data);
             } else {
                 const res = await lessonApi.upload(data);
@@ -212,6 +270,60 @@ const LessonCreate = ({ lesson, onBack }) => {
         e.target.value = null;
     };
 
+    const handleAIGenerate = async () => {
+        if (!aiPrompt) {
+            alert("Please enter a topic or prompt for AI generation.");
+            return;
+        }
+        setGenerating(true);
+        try {
+            const res = await aiApi.generateLessonContent({ prompt: aiPrompt, engine: aiEngine });
+            const generatedJson = res.data.content;
+
+            // Map the parsed JSON to our form states
+            setFormData(prev => ({
+                ...prev,
+                title: generatedJson.title || prev.title,
+                description: generatedJson.description || prev.description,
+                transcription: generatedJson.listening?.transcription || prev.transcription
+            }));
+
+            // Format content if it's an object/array (prevents [object Object])
+            const formatContent = (val) => {
+                if (!val) return '';
+                if (typeof val === 'string') return val;
+                try {
+                    return JSON.stringify(val, null, 2);
+                } catch (e) {
+                    return String(val);
+                }
+            };
+
+            if (generatedJson.logicContent) setStudyContentRaw(formatContent(generatedJson.logicContent));
+            if (generatedJson.evolutionContent) setEvolutionContentRaw(formatContent(generatedJson.evolutionContent));
+            if (generatedJson.readingContent) setReadingContentRaw(formatContent(generatedJson.readingContent));
+            if (generatedJson.vocabularyContent) setVocabularyContentRaw(formatContent(generatedJson.vocabularyContent));
+
+            if (generatedJson.milestoneTest) {
+                // Ensure correct_answer is mapped from 'answer' or 'correct_answer'
+                const normalizedQuestions = generatedJson.milestoneTest.map(q => ({
+                    ...q,
+                    text: q.text || q.question || '',
+                    correct_answer: q.correct_answer || q.answer || ''
+                }));
+                setQuestions(normalizedQuestions);
+            }
+
+            setMessage('Content generated and pre-filled. Please review each tab.');
+            setGeneratedContentPreview(JSON.stringify(generatedJson, null, 2));
+        } catch (err) {
+            console.error(err);
+            alert("Failed to generate content: " + (err.response?.data?.message || err.message));
+        } finally {
+            setGenerating(false);
+        }
+    };
+
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setCurrentTab(id)}
@@ -246,10 +358,14 @@ const LessonCreate = ({ lesson, onBack }) => {
             </header>
 
             <div className="glass-card" style={{ padding: 0, marginBottom: '2rem', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-                    <TabButton id="details" label="1. Details" icon={Plus} />
-                    <TabButton id="media" label="2. Multimedia" icon={Upload} />
-                    <TabButton id="questions" label="3. Questions" icon={HelpCircle} />
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', overflowX: 'auto' }}>
+                    <TabButton id="ai-gen" label="1. AI Auto-Gen" icon={Wand2} />
+                    <TabButton id="details" label="2. Details" icon={Plus} />
+                    <TabButton id="study" label="3. Study" icon={HelpCircle} />
+                    <TabButton id="reading" label="4. Reading" icon={HelpCircle} />
+                    <TabButton id="vocabulary" label="5. Vocabulary" icon={HelpCircle} />
+                    <TabButton id="media" label="6. Multimedia" icon={Upload} />
+                    <TabButton id="questions" label="7. Questions" icon={HelpCircle} />
                 </div>
 
                 <div style={{ padding: '2.5rem' }}>
@@ -301,9 +417,162 @@ const LessonCreate = ({ lesson, onBack }) => {
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 />
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                                <button className="btn" onClick={() => setCurrentTab('ai-gen')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                    ← Back to AI Auto-Gen
+                                </button>
+                                <button className="btn btn-primary" onClick={() => setCurrentTab('study')} style={{ padding: '0.8rem 3rem' }}>
+                                    Next Section: Study Logic →
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {currentTab === 'study' && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <Wand2 size={24} color="var(--primary)" /> ✨ Study Logic & Evolution
+                            </h3>
+
+                            <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--bg-dark)', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>Lesson Logic Breakdown (Magic Shift)</label>
+                                <textarea
+                                    className="glass-card"
+                                    style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', minHeight: '150px' }}
+                                    placeholder='Define the grammar rules and sentence structures here as JSON or text...'
+                                    value={studyContentRaw}
+                                    onChange={(e) => setStudyContentRaw(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--bg-dark)', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>Sentence Evolution Steps</label>
+                                <textarea
+                                    className="glass-card"
+                                    style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', minHeight: '150px' }}
+                                    placeholder='Step-by-step sentence growth...'
+                                    value={evolutionContentRaw}
+                                    onChange={(e) => setEvolutionContentRaw(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                                <button className="btn" onClick={() => setCurrentTab('details')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                    ← Back to Details
+                                </button>
+                                <button className="btn btn-primary" onClick={() => setCurrentTab('reading')} style={{ padding: '0.8rem 3rem' }}>
+                                    Next Section: Reading Lab →
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {currentTab === 'reading' && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <Wand2 size={24} color="var(--primary)" /> 📖 Reading Lab Content
+                            </h3>
+                            <textarea
+                                className="glass-card"
+                                style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', minHeight: '300px' }}
+                                value={readingContentRaw}
+                                onChange={(e) => setReadingContentRaw(e.target.value)}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                                <button className="btn" onClick={() => setCurrentTab('study')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                    ← Back to Study
+                                </button>
+                                <button className="btn btn-primary" onClick={() => setCurrentTab('vocabulary')} style={{ padding: '0.8rem 3rem' }}>
+                                    Next Section: Vocabulary →
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {currentTab === 'vocabulary' && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <Wand2 size={24} color="var(--primary)" /> 🔤 Vocabulary & Mnemonics
+                            </h3>
+                            <textarea
+                                className="glass-card"
+                                style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', minHeight: '300px' }}
+                                value={vocabularyContentRaw}
+                                onChange={(e) => setVocabularyContentRaw(e.target.value)}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                                <button className="btn" onClick={() => setCurrentTab('reading')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                    ← Back to Reading
+                                </button>
                                 <button className="btn btn-primary" onClick={() => setCurrentTab('media')} style={{ padding: '0.8rem 3rem' }}>
                                     Next Section: Multimedia →
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {currentTab === 'ai-gen' && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div className="glass-card" style={{ padding: '1.5rem', background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                                <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#8b5cf6' }}>
+                                    <Wand2 size={20} /> Generate Universal Study Area Content
+                                </h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Topic or Prompt</label>
+                                        <textarea
+                                            className="glass-card"
+                                            style={{ width: '100%', padding: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border)', height: '100px' }}
+                                            placeholder="e.g. A lesson about Simple Present Tense for daily routines. Include vocabulary about morning activities."
+                                            value={aiPrompt}
+                                            onChange={(e) => setAiPrompt(e.target.value)}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>LLM Engine</label>
+                                            <select
+                                                className="glass-card"
+                                                style={{ width: '100%', padding: '0.8rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                                                value={aiEngine}
+                                                onChange={(e) => setAiEngine(e.target.value)}
+                                            >
+                                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast & Balanced)</option>
+                                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced)</option>
+                                            </select>
+                                        </div>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleAIGenerate}
+                                            disabled={generating || !aiPrompt}
+                                            style={{ marginTop: '1.5rem', padding: '0.8rem 2rem', background: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                        >
+                                            {generating ? <Loader2 className="animate-spin" size={18} /> : <Wand2 size={18} />}
+                                            {generating ? 'Generating...' : 'Generate with AI'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {generatedContentPreview && (
+                                <div>
+                                    <h4 style={{ marginBottom: '0.5rem' }}>Generated Content Schema Preview</h4>
+                                    <textarea
+                                        readOnly
+                                        className="glass-card"
+                                        style={{ width: '100%', padding: '1rem', background: '#1e1e1e', color: '#d4d4d4', border: '1px solid var(--border)', height: '300px', fontFamily: 'monospace', fontSize: '13px' }}
+                                        value={generatedContentPreview}
+                                    />
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>*This JSON data will power the @Universal Study Area tabs natively.*</p>
+                                </div>
+                            )}
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                                <button className="btn" onClick={() => setCurrentTab('vocabulary')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                    ← Back to Vocabulary
+                                </button>
+                                <button className="btn btn-primary" onClick={() => setCurrentTab('questions')} style={{ padding: '0.8rem 3rem' }}>
+                                    Next Section: Questions →
                                 </button>
                             </div>
                         </motion.div>
@@ -330,6 +599,18 @@ const LessonCreate = ({ lesson, onBack }) => {
                                     <input type="file" accept="video/*" onChange={(e) => setFiles({ ...files, video: e.target.files[0] })} style={{ width: '100%', fontSize: '0.8rem' }} />
                                     {lesson?.video_url && <p style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: '1rem' }}>✓ Existing Video Saved</p>}
                                 </div>
+                            </div>
+
+                            <div className="glass-card" style={{ padding: '1.5rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Multimedia Transcription</label>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Text placed here will appear as a synced transcription if an audio track is provided, or act as general reading material. This gets auto-filled if the AI generates a listening section.</p>
+                                <textarea
+                                    className="glass-card"
+                                    style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', height: '150px' }}
+                                    placeholder="Enter audio transcription here..."
+                                    value={formData.transcription}
+                                    onChange={(e) => setFormData({ ...formData, transcription: e.target.value })}
+                                />
                             </div>
 
                             {(files.audio || lesson?.audio_url) && (

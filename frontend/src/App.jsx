@@ -31,7 +31,14 @@ function getStoredUser() {
 // ── Protected App Shell ──────────────────────────────────────────────────
 function AppShell() {
   const [user, setUser] = useState(() => getStoredUser());
-  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [selectedLesson, setSelectedLesson] = useState(() => {
+    try {
+      const saved = localStorage.getItem('simplish_active_lesson');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const showToast = useToast();
   const navigate = useNavigate();
@@ -68,7 +75,9 @@ function AppShell() {
         if (user) {
           localStorage.removeItem('simplish_user');
           localStorage.removeItem('simplish_token');
+          localStorage.removeItem('simplish_active_lesson');
           setUser(null);
+          setSelectedLesson(null);
         }
       }
     };
@@ -78,11 +87,13 @@ function AppShell() {
   const handleLogout = () => {
     localStorage.removeItem('simplish_user');
     localStorage.removeItem('simplish_token');
+    localStorage.removeItem('simplish_active_lesson');
     setUser(null);
+    setSelectedLesson(null);
     navigate('/');
   };
 
-  const handleNavigate = (view) => {
+  const handleNavigate = async (view) => {
     setIsMobileMenuOpen(false); // Close menu on navigation
     const role = user?.role?.toLowerCase();
     if ((view === 'admin' || view === 'edit_lesson') && role !== 'moderator' && role !== 'admin' && role !== 'super_admin') {
@@ -93,12 +104,35 @@ function AppShell() {
       showToast('Access Denied: Super Admin Only', 'error');
       return;
     }
+
+    if (view === 'study_area' && !selectedLesson) {
+      // Try to find the most recent lesson if none is selected
+      try {
+        const res = await api.get('/lessons/me/progress');
+        const lessons = Array.isArray(res.data) ? res.data : (res.data.lessons || []);
+        const lastLesson = lessons.find(l => l.status === 'started') || lessons[0];
+
+        if (lastLesson) {
+          startLesson(lastLesson);
+          return;
+        } else {
+          showToast('Please select a lesson from Library first', 'info');
+          navigate('/library');
+          return;
+        }
+      } catch (err) {
+        navigate('/library');
+        return;
+      }
+    }
+
     navigate(`/${view}`);
   };
 
   const startLesson = (lesson) => {
     setSelectedLesson(lesson);
-    navigate('/coaching');
+    localStorage.setItem('simplish_active_lesson', JSON.stringify(lesson));
+    navigate('/study_area');
   };
 
   if (!user) {
@@ -184,7 +218,11 @@ function AppShell() {
                 : <Navigate to="/library" replace />
             } />
 
-            <Route path="/study_area" element={<UniversalStudyArea user={user} />} />
+            <Route path="/study_area" element={
+              selectedLesson
+                ? <UniversalStudyArea user={user} lesson={selectedLesson} onBack={() => navigate('/library')} />
+                : <Navigate to="/library" replace />
+            } />
 
             <Route path="/assessment" element={
               selectedLesson ? (

@@ -199,9 +199,9 @@ exports.upsertAssessment = async (req, res) => {
 
                 return {
                     assessment_id: assessmentId,
-                    question_text: q.text,
+                    question_text: q.text || q.question || 'New Question',
                     question_type: q.type,
-                    correct_answer: q.correct_answer,
+                    correct_answer: q.correct_answer || q.answer,
                     options: jsonOptions,
                     points: q.points || 10,
                     explanation: q.explanation || null

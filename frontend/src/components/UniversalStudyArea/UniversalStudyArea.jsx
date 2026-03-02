@@ -1,56 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Glasses, Target, Loader2 } from 'lucide-react';
+import { BookOpen, Glasses, Target, Loader2, Headphones, Sparkles, ChevronLeft } from 'lucide-react';
 import api from '../../utils/api';
 import MagicShiftDashboard from './MagicShiftDashboard';
 import SentenceEvolution from './SentenceEvolution';
-import GoldList from './GoldList';
+import ReadingLab from './ReadingLab';
+import ListeningLab from './ListeningLab';
+import VocabularyLab from './VocabularyLab';
 import MilestoneTest from './MilestoneTest';
 import { useToast } from '../Toast';
 
-const UniversalStudyArea = ({ user }) => {
-    const [activeTab, setActiveTab] = useState('study'); // study, reading, test
+const UniversalStudyArea = ({ user, lesson, onBack }) => {
+    const [activeTab, setActiveTab] = useState('study'); // study, reading, listening, vocabulary, test
     const [loading, setLoading] = useState(true);
     const showToast = useToast();
 
-    // In a real app, this would be tied to the active lesson ID. 
-    // Using a dummy ID or pulling the first active lesson for demonstration.
-    const [lessonId, setLessonId] = useState(null);
-
     useEffect(() => {
-        // Fetch user progress to restore last active tab
-        const fetchProgress = async () => {
-            try {
-                const res = await api.get('/lesson/progress');
-                // Note: the backend `/lesson/progress` returns `lessons` with embedded progress.
-                // We'll just look for any started lesson that might have a tab saved.
-                // Alternatively, we save the global tab setting in localStorage for immediate sync, 
-                // and backend for cross-device.
-                const savedTab = localStorage.getItem('simplish_last_tab') || 'study';
-                setActiveTab(savedTab);
-
-                if (res.data?.lessons?.length > 0) {
-                    setLessonId(res.data.lessons[0].id);
-                }
-            } catch (err) {
-                console.error("Failed to load progress", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchProgress();
-    }, []);
+        // We received the lesson object from props!
+        // We can just set loading to false.
+        // Or if we want to restore last active tab:
+        const savedTab = localStorage.getItem('simplish_last_tab') || 'study';
+        setActiveTab(savedTab);
+        setLoading(false);
+    }, [lesson]);
 
     const handleTabChange = async (tab) => {
         setActiveTab(tab);
         localStorage.setItem('simplish_last_tab', tab);
 
-        // Persist to backend if we have a lesson context
-        if (lessonId) {
+        // Ping backend to save progress
+        if (lesson?.id) {
             try {
-                await api.post(`/lesson/${lessonId}/progress`, {
+                await api.post(`/lessons/${lesson.id}/progress`, {
                     lastActiveTab: tab,
-                    spentTimeMs: 0 // Just pinging update
+                    spentTimeMs: 0
                 });
             } catch (err) {
                 console.error("Failed to save cross-device tab state", err);
@@ -64,15 +47,27 @@ const UniversalStudyArea = ({ user }) => {
 
     return (
         <div className="universal-study-area">
-            <header style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '1.8rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <BookOpen color="var(--primary)" /> ವಿಶ್ವಾತ್ಮಕ ಅಧ್ಯಯನ ಕೇಂದ್ರ (Universal Study Area)
-                </h1>
-                <p style={{ color: 'var(--text-muted)' }}>Master English sentence structures seamlessly across any device.</p>
+            <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <button
+                    onClick={onBack}
+                    style={{
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-main)',
+                        padding: '0.6rem', borderRadius: '12px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                >
+                    <ChevronLeft size={22} />
+                </button>
+                <div>
+                    <h1 style={{ fontSize: '1.8rem', margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <BookOpen color="var(--primary)" /> {lesson?.title || 'Universal Study Area'}
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', margin: 0, marginTop: '0.25rem' }}>Master English sentence structures seamlessly across any device.</p>
+                </div>
             </header>
 
             {/* Custom Tab Navigation */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '2px solid var(--border)', overflowX: 'auto', paddingBottom: '2px' }}>
+            <div className="hide-scrollbar" style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '2px solid var(--border)', overflowX: 'auto', paddingBottom: '2px', touchAction: 'pan-x' }}>
                 <button
                     onClick={() => handleTabChange('study')}
                     className="touch-target"
@@ -97,7 +92,33 @@ const UniversalStudyArea = ({ user }) => {
                         marginBottom: '-2px', transition: 'all 0.2s', whiteSpace: 'nowrap'
                     }}
                 >
-                    <Glasses size={18} /> Reading Lab (ಓದುವ ಪ್ರಯೋಗಾಲಯ)
+                    <Glasses size={18} /> Reading (ಓದಿ ತಿಳಿ)
+                </button>
+                <button
+                    onClick={() => handleTabChange('listening')}
+                    className="touch-target"
+                    style={{
+                        background: 'none', border: 'none', padding: '0.75rem 1.5rem', cursor: 'pointer',
+                        fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        color: activeTab === 'listening' ? 'var(--primary)' : 'var(--text-muted)',
+                        borderBottom: activeTab === 'listening' ? '3px solid var(--primary)' : '3px solid transparent',
+                        marginBottom: '-2px', transition: 'all 0.2s', whiteSpace: 'nowrap'
+                    }}
+                >
+                    <Headphones size={18} /> Listening (ಕೇಳಿ ಕಲಿ)
+                </button>
+                <button
+                    onClick={() => handleTabChange('vocabulary')}
+                    className="touch-target"
+                    style={{
+                        background: 'none', border: 'none', padding: '0.75rem 1.5rem', cursor: 'pointer',
+                        fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        color: activeTab === 'vocabulary' ? 'var(--primary)' : 'var(--text-muted)',
+                        borderBottom: activeTab === 'vocabulary' ? '3px solid var(--primary)' : '3px solid transparent',
+                        marginBottom: '-2px', transition: 'all 0.2s', whiteSpace: 'nowrap'
+                    }}
+                >
+                    <Sparkles size={18} /> Vocabulary (ಶಬ್ದಕೋಶ)
                 </button>
                 <button
                     onClick={() => handleTabChange('test')}
@@ -110,7 +131,7 @@ const UniversalStudyArea = ({ user }) => {
                         marginBottom: '-2px', transition: 'all 0.2s', whiteSpace: 'nowrap'
                     }}
                 >
-                    <Target size={18} /> Milestone Test (ಮೈಲಿಗಲ್ಲು ಪರೀಕ್ಷೆ)
+                    <Target size={18} /> Milestone Test (ಮೈಲಿಗಲ್ಲು)
                 </button>
             </div>
 
@@ -125,18 +146,32 @@ const UniversalStudyArea = ({ user }) => {
                 >
                     {activeTab === 'study' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                            <MagicShiftDashboard />
-                            <SentenceEvolution />
+                            <MagicShiftDashboard logicContent={lesson?.content?.logicContent} />
+                            <SentenceEvolution evolutionContent={lesson?.content?.evolutionContent} />
                         </div>
                     )}
                     {activeTab === 'reading' && (
                         <div>
-                            <GoldList />
+                            <ReadingLab readingContent={lesson?.content?.readingContent} />
+                        </div>
+                    )}
+                    {activeTab === 'listening' && (
+                        <div>
+                            <ListeningLab transcription={lesson?.transcription} audioUrl={lesson?.audio_url} />
+                        </div>
+                    )}
+                    {activeTab === 'vocabulary' && (
+                        <div>
+                            <VocabularyLab vocabularyContent={lesson?.content?.vocabularyContent} />
                         </div>
                     )}
                     {activeTab === 'test' && (
                         <div>
-                            <MilestoneTest />
+                            <MilestoneTest
+                                testContent={lesson?.content?.milestoneTest}
+                                lessonId={lesson?.id}
+                                onComplete={() => showToast("Test Complete! Points updated.", 'success')}
+                            />
                         </div>
                     )}
                 </motion.div>

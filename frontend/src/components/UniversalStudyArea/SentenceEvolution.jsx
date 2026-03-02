@@ -1,17 +1,30 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Layers, CheckCircle2, AlertCircle } from 'lucide-react';
 
-const SentenceEvolution = () => {
+const SentenceEvolution = ({ evolutionContent }) => {
     // In a real app this progress comes from the user_progress table
-    const [currentStep, setCurrentStep] = useState(2);
+    const [currentStep, setCurrentStep] = useState(1); // Set to 1 to show some progress in preview
 
-    const steps = [
-        { level: "Level 1: Basic", desc: "Two Words", exampleId: "I Eat", exampleKn: "ನಾನು ತಿನ್ನುತ್ತೇನೆ", color: "#60a5fa" }, // Blue
-        { level: "Level 2: Object", desc: "Three Words", exampleId: "I Eat Apple", exampleKn: "ನಾನು ಸೇಬು ತಿನ್ನುತ್ತೇನೆ", color: "#34d399" }, // Green
-        { level: "Level 3: Time", desc: "Four Words", exampleId: "I Eat Apple Daily", exampleKn: "ನಾನು ಪ್ರತಿದಿನ ಸೇಬು ತಿನ್ನುತ್ತೇನೆ", color: "#fbbf24" }, // Amber
-        { level: "Level 4: Advanced", desc: "Complex", exampleId: "I Eat Apple With Ravi", exampleKn: "ನಾನು ರವಿಯೊಂದಿಗೆ ಸೇಬು ತಿನ್ನುತ್ತೇನೆ", color: "#f43f5e" } // Rose
-    ];
+    if (!evolutionContent || !Array.isArray(evolutionContent) || evolutionContent.length === 0) {
+        return (
+            <section className="glass-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', marginTop: '1rem' }}>
+                <AlertCircle size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+                <h3>No Evolution Content Available</h3>
+                <p>Sentence building phases haven't been generated for this lesson.</p>
+            </section>
+        );
+    }
+
+    const defaultColors = ["#60a5fa", "#34d399", "#fbbf24", "#f43f5e", "#a855f7"];
+
+    const steps = evolutionContent.map((step, idx) => ({
+        level: step.level || `Level ${idx + 1}`,
+        desc: step.explanation || "Evolution Step",
+        exampleId: step.english,
+        exampleKn: step.kannada,
+        color: defaultColors[idx % defaultColors.length]
+    }));
 
     return (
         <section className="glass-card" style={{ padding: '1.5rem', marginTop: '1rem' }}>
@@ -26,14 +39,16 @@ const SentenceEvolution = () => {
                         .evolution-container { display: flex; flex-direction: column; gap: 1rem; }
                         @media(min-width: 1024px) {
                             .evolution-container { flex-direction: row; justify-content: space-between; gap: 0.5rem; }
-                            .evolution-step { flex: 1; }
+                            .evolution-step { flex: 1; min-width: 0; }
                         }
                     `}
                 </style>
                 <div className="evolution-container">
                     {steps.map((step, idx) => {
-                        const isUnlocked = idx <= currentStep;
-                        const isActive = idx === currentStep;
+                        // For demonstration, let's unlock all steps if previewing, or base it on progress.
+                        // Here we unlock all to easily view the AI content.
+                        const isUnlocked = true;
+                        const isActive = idx === steps.length - 1; // Highlight the most advanced one or the current step
 
                         return (
                             <motion.div
@@ -58,7 +73,7 @@ const SentenceEvolution = () => {
                                 <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem', fontWeight: 700 }}>{step.desc}</h3>
 
                                 {isUnlocked && (
-                                    <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'var(--bg-dark)', borderRadius: '0.5rem' }}>
+                                    <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'var(--bg-dark)', borderRadius: '0.5rem', wordBreak: 'break-word' }}>
                                         <div style={{ fontWeight: 800, color: 'var(--text-main)' }}>{step.exampleId}</div>
                                         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{step.exampleKn}</div>
                                     </div>
