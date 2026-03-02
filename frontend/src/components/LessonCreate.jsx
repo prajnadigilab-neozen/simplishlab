@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, CheckCircle2, XCircle, Loader2, ArrowLeft, Plus, HelpCircle, Edit, Trash2, Wand2 } from 'lucide-react';
+import { Upload, CheckCircle2, XCircle, Loader2, ArrowLeft, Plus, HelpCircle, Edit, Trash2, Wand2, Sparkles } from 'lucide-react';
 import { lessonApi, assessmentApi, aiApi } from '../utils/api';
 
 const LessonCreate = ({ lesson, onBack }) => {
@@ -16,10 +16,10 @@ const LessonCreate = ({ lesson, onBack }) => {
 
     // Sub-states for various sections
     // Sub-states for various sections as raw JSON strings for easier editing
-    const [studyContentRaw, setStudyContentRaw] = useState('[]');
-    const [evolutionContentRaw, setEvolutionContentRaw] = useState('[]');
-    const [readingContentRaw, setReadingContentRaw] = useState('[]');
-    const [vocabularyContentRaw, setVocabularyContentRaw] = useState('[]');
+    const [studyContentRaw, setStudyContentRaw] = useState('');
+    const [evolutionContentRaw, setEvolutionContentRaw] = useState('');
+    const [readingContentRaw, setReadingContentRaw] = useState('');
+    const [vocabularyContentRaw, setVocabularyContentRaw] = useState('');
     const [files, setFiles] = useState({ pdf: null, audio: null, video: null });
     const [status, setStatus] = useState('idle');
     const [message, setMessage] = useState('');
@@ -52,10 +52,10 @@ const LessonCreate = ({ lesson, onBack }) => {
             });
             // Populate sub-states
             const content = lesson.content || {};
-            setStudyContentRaw(JSON.stringify(content.logicContent || [], null, 2));
-            setEvolutionContentRaw(JSON.stringify(content.evolutionContent || [], null, 2));
-            setReadingContentRaw(JSON.stringify(content.readingContent || [], null, 2));
-            setVocabularyContentRaw(JSON.stringify(content.vocabularyContent || [], null, 2));
+            setStudyContentRaw(content.logicContent?.length > 0 ? JSON.stringify(content.logicContent, null, 2) : '');
+            setEvolutionContentRaw(content.evolutionContent?.length > 0 ? JSON.stringify(content.evolutionContent, null, 2) : '');
+            setReadingContentRaw(content.readingContent?.length > 0 ? JSON.stringify(content.readingContent, null, 2) : '');
+            setVocabularyContentRaw(content.vocabularyContent?.length > 0 ? JSON.stringify(content.vocabularyContent, null, 2) : '');
             setQuestions(lesson.questions || content.milestoneTest || []);
             setFiles({ pdf: null, audio: null, video: null });
             if (lesson.content) {
@@ -76,10 +76,10 @@ const LessonCreate = ({ lesson, onBack }) => {
             });
             setGeneratedContentPreview('');
             setAiPrompt('');
-            setStudyContentRaw('[]');
-            setEvolutionContentRaw('[]');
-            setReadingContentRaw('[]');
-            setVocabularyContentRaw('[]');
+            setStudyContentRaw('');
+            setEvolutionContentRaw('');
+            setReadingContentRaw('');
+            setVocabularyContentRaw('');
             setFiles({ pdf: null, audio: null, video: null });
         }
     }, [lesson]);
@@ -151,13 +151,20 @@ const LessonCreate = ({ lesson, onBack }) => {
             // 0. Parse and Bundle all content sections
             let finalLogic, finalEvolution, finalReading, finalVocabulary;
             try {
-                finalLogic = JSON.parse(studyContentRaw);
-                finalEvolution = JSON.parse(evolutionContentRaw);
-                finalReading = JSON.parse(readingContentRaw);
-                finalVocabulary = JSON.parse(vocabularyContentRaw);
-            } catch (pErr) {
-                throw new Error("One or more content sections contain invalid JSON. Please check Study, Reading, or Vocabulary tabs.");
-            }
+                finalLogic = studyContentRaw.trim() ? JSON.parse(studyContentRaw) : [];
+            } catch (pErr) { throw new Error("Study Logic (Magic Shift) contains invalid JSON format."); }
+
+            try {
+                finalEvolution = evolutionContentRaw.trim() ? JSON.parse(evolutionContentRaw) : [];
+            } catch (pErr) { throw new Error("Sentence Evolution Steps contains invalid JSON format."); }
+
+            try {
+                finalReading = readingContentRaw.trim() ? JSON.parse(readingContentRaw) : [];
+            } catch (pErr) { throw new Error("Reading Lab Content contains invalid JSON format."); }
+
+            try {
+                finalVocabulary = vocabularyContentRaw.trim() ? JSON.parse(vocabularyContentRaw) : [];
+            } catch (pErr) { throw new Error("Vocabulary & Mnemonics contains invalid JSON format."); }
 
             const lessonContent = {
                 logicContent: finalLogic,
@@ -299,10 +306,34 @@ const LessonCreate = ({ lesson, onBack }) => {
                 }
             };
 
-            if (generatedJson.logicContent) setStudyContentRaw(formatContent(generatedJson.logicContent));
-            if (generatedJson.evolutionContent) setEvolutionContentRaw(formatContent(generatedJson.evolutionContent));
-            if (generatedJson.readingContent) setReadingContentRaw(formatContent(generatedJson.readingContent));
-            if (generatedJson.vocabularyContent) setVocabularyContentRaw(formatContent(generatedJson.vocabularyContent));
+            // Format content into arrays with robust fallbacks
+            const ensureArray = (val, type) => {
+                if (!val) return '[]';
+                if (Array.isArray(val)) return JSON.stringify(val, null, 2);
+
+                // If AI returned a string instead of an array, attempt to wrap it
+                if (typeof val === 'string') {
+                    try {
+                        const parsed = JSON.parse(val);
+                        if (Array.isArray(parsed)) return JSON.stringify(parsed, null, 2);
+                    } catch (e) { /* Not JSON string, continue to wrapping */ }
+
+                    // Wrap based on type
+                    switch (type) {
+                        case 'logic': return JSON.stringify([{ explanation: val, kannadaStructure: [], englishStructure: [] }], null, 2);
+                        case 'evolution': return JSON.stringify([{ level: 'Level 1', explanation: val, english: '', kannada: '' }], null, 2);
+                        case 'reading': return JSON.stringify([{ text: val, pronunciation: '', translation: '' }], null, 2);
+                        case 'vocabulary': return JSON.stringify([{ word: val, translation: '', mnemonic: '', category: '' }], null, 2);
+                        default: return '[]';
+                    }
+                }
+                return JSON.stringify([val], null, 2); // Final fallback: wrap whatever it is
+            };
+
+            setStudyContentRaw(ensureArray(generatedJson.logicContent, 'logic'));
+            setEvolutionContentRaw(ensureArray(generatedJson.evolutionContent, 'evolution'));
+            setReadingContentRaw(ensureArray(generatedJson.readingContent, 'reading'));
+            setVocabularyContentRaw(ensureArray(generatedJson.vocabularyContent, 'vocabulary'));
 
             if (generatedJson.milestoneTest) {
                 // Ensure correct_answer is mapped from 'answer' or 'correct_answer'
@@ -541,16 +572,64 @@ const LessonCreate = ({ lesson, onBack }) => {
                                                 <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced)</option>
                                             </select>
                                         </div>
+                                    </div>
+
+                                    {!generating && (
                                         <button
                                             className="btn btn-primary"
                                             onClick={handleAIGenerate}
-                                            disabled={generating || !aiPrompt}
-                                            style={{ marginTop: '1.5rem', padding: '0.8rem 2rem', background: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '1rem',
+                                                marginTop: '0.5rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '0.75rem',
+                                                background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                                                boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
+                                            }}
                                         >
-                                            {generating ? <Loader2 className="animate-spin" size={18} /> : <Wand2 size={18} />}
-                                            {generating ? 'Generating...' : 'Generate with AI'}
+                                            <Wand2 size={20} />
+                                            Generate with AI
                                         </button>
-                                    </div>
+                                    )}
+
+                                    {generating && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            style={{
+                                                marginTop: '2rem',
+                                                textAlign: 'center',
+                                                padding: '2.5rem',
+                                                background: 'rgba(139, 92, 246, 0.1)',
+                                                borderRadius: '1.5rem',
+                                                border: '1px solid rgba(139, 92, 246, 0.2)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '1rem'
+                                            }}
+                                        >
+                                            <motion.div
+                                                animate={{
+                                                    scale: [1, 1.2, 1],
+                                                    rotate: [0, 10, -10, 0],
+                                                    filter: ["hue-rotate(0deg)", "hue-rotate(90deg)", "hue-rotate(0deg)"]
+                                                }}
+                                                transition={{ repeat: Infinity, duration: 3 }}
+                                                style={{ color: '#8b5cf6', marginBottom: '1rem' }}
+                                            >
+                                                <Sparkles size={64} />
+                                            </motion.div>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+                                                <Loader2 className="animate-spin" size={24} color="#8b5cf6" />
+                                                <h4 style={{ margin: 0, color: '#8b5cf6' }}>Simplish AI is crafting your lesson...</h4>
+                                            </div>
+                                            <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Generating bilingual logic, reading labs, and assessments.</p>
+                                        </motion.div>
+                                    )}
                                 </div>
                             </div>
 
@@ -567,12 +646,9 @@ const LessonCreate = ({ lesson, onBack }) => {
                                 </div>
                             )}
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                                <button className="btn" onClick={() => setCurrentTab('vocabulary')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
-                                    ← Back to Vocabulary
-                                </button>
-                                <button className="btn btn-primary" onClick={() => setCurrentTab('questions')} style={{ padding: '0.8rem 3rem' }}>
-                                    Next Section: Questions →
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                                <button className="btn btn-primary" onClick={() => setCurrentTab('details')} style={{ padding: '0.8rem 3rem' }}>
+                                    Next Section: Details →
                                 </button>
                             </div>
                         </motion.div>
@@ -623,9 +699,9 @@ const LessonCreate = ({ lesson, onBack }) => {
                                 </div>
                             )}
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                                <button className="btn" onClick={() => setCurrentTab('details')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
-                                    ← Back to Details
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
+                                <button className="btn" onClick={() => setCurrentTab('vocabulary')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                    ← Back to Vocabulary
                                 </button>
                                 <button className="btn btn-primary" onClick={() => setCurrentTab('questions')} style={{ padding: '0.8rem 3rem' }}>
                                     Next Section: Questions →

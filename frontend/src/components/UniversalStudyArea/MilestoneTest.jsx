@@ -41,10 +41,10 @@ const MilestoneTest = ({ testContent, lessonId, onComplete }) => {
             const userAnswer = userAnswers[idx] || '';
             if (q.options && q.options.length > 0) {
                 // MCQ
-                if (userAnswer === q.answer) correctCount++;
+                if (userAnswer === q.correct_answer) correctCount++;
             } else {
                 // Text Translation
-                if (userAnswer.trim().toLowerCase() === q.answer.trim().toLowerCase()) {
+                if (userAnswer.trim().toLowerCase() === q.correct_answer.trim().toLowerCase()) {
                     correctCount++;
                 }
             }
@@ -110,8 +110,8 @@ const MilestoneTest = ({ testContent, lessonId, onComplete }) => {
                 const isMCQ = q.options && q.options.length > 0;
                 const userAnswer = userAnswers[idx] || '';
                 const isCorrect = isMCQ
-                    ? userAnswer === q.answer
-                    : userAnswer.trim().toLowerCase() === q.answer.trim().toLowerCase();
+                    ? userAnswer === q.correct_answer
+                    : userAnswer.trim().toLowerCase() === q.correct_answer.trim().toLowerCase();
 
                 let cardStyle = { padding: '1.5rem', border: '1px solid var(--border)' };
                 if (submitted) {
@@ -122,14 +122,14 @@ const MilestoneTest = ({ testContent, lessonId, onComplete }) => {
                 return (
                     <div key={idx} className="glass-card" style={cardStyle}>
                         <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem', lineHeight: '1.5' }}>
-                            <span style={{ color: 'var(--primary)', marginRight: '0.5rem' }}>Q{idx + 1}.</span> {q.question}
+                            <span style={{ color: 'var(--primary)', marginRight: '0.5rem' }}>Q{idx + 1}.</span> {q.text}
                         </h3>
 
                         {isMCQ ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 {q.options.map((option, optIdx) => {
                                     const isSelected = userAnswer === option;
-                                    const isCorrectOption = option === q.answer;
+                                    const isCorrectOption = option === q.correct_answer;
 
                                     let optionStyle = {
                                         display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem',
@@ -175,7 +175,7 @@ const MilestoneTest = ({ testContent, lessonId, onComplete }) => {
                                 />
                                 {submitted && !isCorrect && (
                                     <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '0.5rem', fontWeight: 600 }}>
-                                        Correct Answer: {q.answer}
+                                        Correct Answer: {q.correct_answer}
                                     </div>
                                 )}
                             </div>

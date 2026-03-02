@@ -37,4 +37,5 @@ out/
 
 # System files
 Thumbs.db
-desktop.ini
+# Developer Log
+developer_log.md

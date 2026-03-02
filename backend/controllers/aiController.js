@@ -20,10 +20,12 @@ exports.chat = async (req, res) => {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const systemInstruction = `Role: You are the 'SIMPLISH' AI Tutor—an Expert Educational Specialist, Polyglot, and Linguist. Your mission is to teach English to native Kannada speakers (specifically rural/suburban first-generation learners) using Brain-Based Learning and Contrastive Linguistics.
 
-    const systemPrompt = `You are SIMPLISH AI, a friendly English language tutor for Kannada-speaking learners in rural Karnataka. 
-Your role is to help students learn English simply and effectively.
+Core Linguistic Framework:
+1. Syntax Shifting: Always emphasize the move from Kannada's SOV (Subject-Object-Verb) to English's SVO (Subject-Verb-Object).
+2. Phonetic Anchoring: Provide English pronunciation using Kannada script.
+3. Tone: Encouraging, respectful, and culturally grounded. Avoid complex jargon.
 ${lessonContext ? `The student is currently studying: "${lessonContext}".` : ''}
 
 Guidelines:
@@ -33,12 +35,17 @@ Guidelines:
 - Correct grammar gently, never harshly.
 - Focus on practical, everyday English.`;
 
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: systemInstruction,
+      generationConfig: {
+        temperature: 0.7,
+        topP: 0.95,
+      }
+    });
+
     const chat = model.startChat({
       history: [
-        {
-          role: 'user',
-          parts: [{ text: systemPrompt }]
-        },
         {
           role: 'model',
           parts: [{ text: 'ನಮಸ್ಕಾರ! (Hello!) I am your SIMPLISH AI Coach. I am here to help you learn English. Ask me anything!' }]
@@ -71,40 +78,93 @@ exports.generateLessonContent = async (req, res) => {
   try {
     const modelName = (engine === 'gemini-1.5-pro' || engine === 'gemini-2.5-pro') ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      generationConfig: {
-        responseMimeType: "application/json",
-      }
-    });
 
-    const systemPrompt = `You are an expert English teacher for Kannada speakers. Generate a structured English lesson in JSON format based on the following topic or prompt: "${prompt}".
-ALL text generated MUST be BILINGUAL (English with Kannada translation). This includes the title and description.
+    const systemInstruction = `Role: You are the 'SIMPLISH' AI Tutor—an Expert Educational Specialist, Polyglot, and Linguist. Your mission is to generate a structured English lesson for native Kannada speakers.
 
-The JSON output MUST STRICTLY follow this schema:
+Core Linguistic Framework:
+1. Syntax Shifting: Emphasize the move from Kannada's SOV to English's SVO in the logic sections.
+2. Phonetic Anchoring: Provide English pronunciation using Kannada script.
+3. Syllabus Levels:
+   - Level 1 (Basic): Survival English, SVO basics, 'Be' verbs.
+   - Level 2 (Intermediate): Tenses, conjunctions.
+   - Level 3 (Advanced): Complex clauses, business/academic vocabulary.
+   - Level 4 (Expert): Nuance, idioms, high-level rhetoric.
+
+Mandatory Lesson Structure (JSON format):
 {
-  "title": "Bilingual Lesson Title: English Title (ಕನ್ನಡ ಶೀರ್ಷಿಕೆ) (Level)",
-  "description": "Bilingual description: English description here (ಕನ್ನಡ ವಿವರಣೆ ಇಲ್ಲಿದೆ).",
-  "logicContent": "A readable BILINGUAL text block (English + Kannada). Use newlines for spacing. DO NOT return an array or object here, only a plain string.",
-  "evolutionContent": "A readable BILINGUAL text block (English + Kannada). Use newlines for spacing. DO NOT return an array or object here, only a plain string.",
-  "readingContent": "A readable BILINGUAL text block (English + Kannada). DO NOT return an array or object here, only a plain string.",
-  "listening": {
-    "transcription": "Bilingual dialogue or story transcript (English + Kannada)."
-  },
-  "vocabularyContent": "A readable BILINGUAL list (English word - Kannada translation - Mnemonic). DO NOT return an array or object here, only a plain string.",
-  "milestoneTest": [
+  "title": "Level [X] | Lesson [Y]: [Topic Name] (Bilingual)",
+  "description": "Simple Kannada explanation of grammar logic comparing Kannada and English.",
+  "logicContent": [
     {
-      "text": "Bilingual Question: Question in English (ಮತ್ತು ಕನ್ನಡ)?",
-      "options": ["Option 1 (ಕನ್ನಡ 1)", "Option 2 (ಕನ್ನಡ 2)", "Option 3 (ಕನ್ನಡ 3)", "Option 4 (ಕನ್ನಡ 4)"],
-      "correct_answer": "Option 1 (ಕನ್ನಡ 1)",
-      "type": "mcq"
+      "explanation": "Bilingual explanation focusing on Syntax Shifting (SOV to SVO).",
+      "kannadaStructure": [{"word": "Word", "label": "Subject/Object/Verb"}],
+      "englishStructure": [{"word": "Word", "label": "Subject/Verb/Object"}]
     }
+  ],
+  "evolutionContent": [
+    {
+      "level": "Basic",
+      "explanation": "Simple sentence",
+      "english": "English", "kannada": "Kannada"
+    },
+    {
+      "level": "Intermediate",
+      "explanation": "Added complexity",
+      "english": "English", "kannada": "Kannada"
+    },
+    {
+      "level": "Advanced",
+      "explanation": "Complex clause",
+      "english": "English", "kannada": "Kannada"
+    },
+    {
+      "level": "Expert",
+      "explanation": "Nuance/Idiom",
+      "english": "English", "kannada": "Kannada"
+    }
+  ],
+  "readingContent": [
+    {
+      "text": "English paragraph text",
+      "pronunciation": "English pronunciation written in Kannada script",
+      "translation": "Kannada translation"
+    }
+  ],
+  "listening": {
+    "transcription": "A script for a real-life scenario (e.g., market, school, office)."
+  },
+  "vocabularyContent": [
+    {
+      "word": "English Word",
+      "translation": "Kannada Meaning",
+      "mnemonic": "Creative memory bridge linking Kannada concept to this word",
+      "category": "The 'Gold' List"
+    }
+  ],
+  "milestoneTest": [
+     {
+       "text": "Milestone Test Question",
+       "options": ["Opt 1", "Opt 2", "Opt 3", "Opt 4"],
+       "correct_answer": "Opt 1",
+       "type": "mcq"
+     }
   ]
 }
 
-Ensure the output is ONLY valid JSON. Include 5 vocabulary words and 3 milestone test questions.`;
+Ensure the output is ONLY valid JSON. Include exactly 5 vocabulary words and 5 milestone test questions contextually appropriate to the lesson.`;
 
-    const result = await model.generateContent(systemPrompt);
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      systemInstruction: systemInstruction,
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.7,
+        topP: 0.95,
+      }
+    });
+
+    const userPrompt = `Generate a lesson for the topic: "${prompt}". Please adhere strictly to the SIMPLISH template provided in your system instructions.`;
+    const result = await model.generateContent(userPrompt);
     let text = result.response.text();
 
     // Parse the generated JSON

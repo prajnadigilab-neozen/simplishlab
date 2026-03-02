@@ -1,5 +1,5 @@
 require('dotenv').config();
-const supabase = require('./config/supabase');
+const supabase = require('../config/supabase');
 
 async function syncAllAdmins() {
     console.log('--- Generalized Admin Role Synchronization ---');
