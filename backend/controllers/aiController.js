@@ -92,66 +92,63 @@ Core Linguistic Framework:
 
 Mandatory Lesson Structure (JSON format):
 {
-  "title": "Level [X] | Lesson [Y]: [Topic Name] (Bilingual)",
-  "description": "Simple Kannada explanation of grammar logic comparing Kannada and English.",
-  "logicContent": [
-    {
-      "explanation": "Bilingual explanation focusing on Syntax Shifting (SOV to SVO).",
-      "kannadaStructure": [{"word": "Word", "label": "Subject/Object/Verb"}],
-      "englishStructure": [{"word": "Word", "label": "Subject/Verb/Object"}]
-    }
-  ],
-  "evolutionContent": [
-    {
-      "level": "Basic",
-      "explanation": "Simple sentence",
-      "english": "English", "kannada": "Kannada"
-    },
-    {
-      "level": "Intermediate",
-      "explanation": "Added complexity",
-      "english": "English", "kannada": "Kannada"
-    },
-    {
-      "level": "Advanced",
-      "explanation": "Complex clause",
-      "english": "English", "kannada": "Kannada"
-    },
-    {
-      "level": "Expert",
-      "explanation": "Nuance/Idiom",
-      "english": "English", "kannada": "Kannada"
-    }
-  ],
-  "readingContent": [
-    {
-      "text": "English paragraph text",
-      "pronunciation": "English pronunciation written in Kannada script",
-      "translation": "Kannada translation"
-    }
-  ],
-  "listening": {
-    "transcription": "A script for a real-life scenario (e.g., market, school, office)."
+  "course_metadata": {
+    "platform": "SIMPLISH",
+    "level": 1,
+    "lesson_number": 3,
+    "topic": "Topic Name",
+    "language_pair": "Kannada to English",
+    "engine_target": "gemini-2.5-flash"
   },
-  "vocabularyContent": [
-    {
-      "word": "English Word",
-      "translation": "Kannada Meaning",
-      "mnemonic": "Creative memory bridge linking Kannada concept to this word",
-      "category": "The 'Gold' List"
-    }
-  ],
-  "milestoneTest": [
-     {
-       "text": "Milestone Test Question",
-       "options": ["Opt 1", "Opt 2", "Opt 3", "Opt 4"],
-       "correct_answer": "Opt 1",
-       "type": "mcq"
-     }
-  ]
+  "lesson_content": {
+    "explanation": {
+      "kannada": "Grammar rule in Kannada",
+      "english_logic": "Grammar rule logic in English"
+    },
+    "sentence_evolution": [
+      {
+        "stage": "Basic/Intermediate/Advanced/Expert",
+        "english": "Sentence in English",
+        "kannada": "Sentence in Kannada"
+      }
+    ],
+    "reading_lab": {
+      "text": "English paragraph",
+      "phonetic_kannada": "Pronunciation in Kannada"
+    },
+    "listening_lab": {
+      "scenario": "Market/Office conversation",
+      "script": [
+        {"speaker": "Name", "en": "English line", "kn": "Kannada line"}
+      ]
+    },
+    "retention_block": {
+      "gold_list": [
+        {"word": "Word", "kn": "Meaning", "pronunciation": "Phonetic"}
+      ],
+      "mnemonic_bridge": {
+        "concept": "Concept link",
+        "logic": "Memory trick"
+      },
+      "srs_cue": {
+        "review_24h": "Task",
+        "review_7d": "Task",
+        "review_30d": "Task"
+      }
+    },
+    "milestone_test": [
+      {
+        "id": 1,
+        "question": "Question text",
+        "options": ["A", "B", "C", "D"],
+        "correct_answer": "Answer",
+        "explanation": "Why?"
+      }
+    ]
+  }
 }
 
-Ensure the output is ONLY valid JSON. Include exactly 5 vocabulary words and 5 milestone test questions contextually appropriate to the lesson.`;
+Ensure the output is ONLY valid JSON. Include exactly 4 evolution stages, 5 gold words, and 5 milestone test questions contextual to the lesson. Use the exact key names as shown above.`;
 
     const model = genAI.getGenerativeModel({
       model: modelName,

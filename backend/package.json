@@ -18,7 +18,7 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "check_db_users.js",
+  "main": "server.js",
   "directories": {
     "test": "tests"
   },

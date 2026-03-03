@@ -20,7 +20,8 @@ const Navbar = ({ toggleMobileMenu }) => {
             'reports': 'ವರದಿಗಳು (Reports)',
             'profile': 'ಪ್ರೊಫೈಲ್ (Profile)',
             'coaching': 'ತರಬೇತಿ (Coaching)',
-            'assessment': 'ಮೌಲ್ಯಮಾಪನ (Assessment)'
+            'assessment': 'ಮೌಲ್ಯಮಾಪನ (Assessment)',
+            'study_area': 'ಸ್ಟಡಿ ಏರಿಯಾ (Study Area)'
         };
         return titles[route] || 'SIMPLISH';
     };

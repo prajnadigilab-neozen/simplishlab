@@ -129,16 +129,10 @@ const Library = ({ user, onSelectLesson, onEditLesson, onAddLesson }) => {
 
                         if (lessonsInLevel.length === 0 && searchQuery) return null;
 
-                        let isLocked = false;
-                        if (!isMod && levelIndex > 0) {
-                            const prevLevel = levels[levelIndex - 1];
-                            const lessonsInPrevLevel = lessons.filter(l => l.level === prevLevel);
-                            if (lessonsInPrevLevel.length > 0) {
-                                const totalProg = lessonsInPrevLevel.reduce((acc, l) => acc + (l.progress || 0), 0);
-                                const avgProg = Math.round(totalProg / lessonsInPrevLevel.length);
-                                isLocked = avgProg < 100;
-                            }
-                        }
+                        // Robust locking: Module is locked if any lesson in any previous level is incomplete
+                        const prevLevels = levels.slice(0, levelIndex);
+                        const lessonsInPrevLevels = lessons.filter(l => prevLevels.includes(l.level));
+                        const isLocked = !isMod && levelIndex > 0 && lessonsInPrevLevels.some(l => (l.progress || 0) < 100);
 
                         const isExpanded = expandedModules.includes(lvl);
                         const toggleModule = () => {

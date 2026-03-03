@@ -64,15 +64,17 @@ const Dashboard = ({ user, onStartLesson }) => {
     });
 
     // Find the lesson the user is currently working on or the next logical one
-    const currentLesson =
+    const incompleteLesson =
         sortedLessons.find(l => (l.status === 'started' || l.progress > 0) && l.progress < 100) || // Partially complete
-        sortedLessons.find(l => l.status !== 'completed') || // Next fully unstarted
-        sortedLessons[0] || // All finished; default to the beginning
-        {
-            title: "No lessons available yet",
-            progress: 0,
-            level: "N/A"
-        };
+        sortedLessons.find(l => l.status !== 'completed'); // Next fully unstarted
+
+    const isCourseCompleted = lessons.length > 0 && !incompleteLesson;
+
+    const currentLesson = incompleteLesson || sortedLessons[sortedLessons.length - 1] || {
+        title: "No lessons available yet",
+        progress: 0,
+        level: "N/A"
+    };
 
     if (loading) {
         return (
@@ -84,6 +86,7 @@ const Dashboard = ({ user, onStartLesson }) => {
 
     return (
         <div className="main-content">
+            {/* Header omitted for brevity */}
             <header style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                     <div style={{
@@ -125,8 +128,6 @@ const Dashboard = ({ user, onStartLesson }) => {
                         <p style={{ color: 'var(--text-muted)', margin: 0 }}>ಬನ್ನಿ, ಇಂಗ್ಲಿಷ್ ಕಲಿಯೋಣ. (Come, let's learn English.)</p>
                     </div>
                 </div>
-
-
             </header>
 
             {error && (
@@ -142,10 +143,9 @@ const Dashboard = ({ user, onStartLesson }) => {
                             <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <span>ವ್ಯಾಸಂಗದ ಒಟ್ಟಾರೆ ಮಾಹಿತಿ (Curriculum Overview)</span>
                             </h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                            <div style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', display: 'grid', gap: '1.5rem' }}>
                                 {levels.map((lvl) => {
                                     const lessonsInLevel = lessons.filter(l => l.level === lvl).length;
-                                    const usersInLevel = adminStats?.levelDistribution?.[lvl] || 0;
                                     return (
                                         <motion.div
                                             key={lvl}
@@ -160,8 +160,6 @@ const Dashboard = ({ user, onStartLesson }) => {
                                                 <span style={{ color: 'var(--text-muted)' }}>Total Lessons</span>
                                                 <span style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary)' }}>{lessonsInLevel}</span>
                                             </div>
-
-
                                         </motion.div>
                                     );
                                 })}
@@ -172,40 +170,76 @@ const Dashboard = ({ user, onStartLesson }) => {
                             {/* Pick up where you left off */}
                             <section style={{ marginBottom: '4rem' }}>
                                 <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span>ಮುಂದುವರಿಸಿ (Continue)</span>
+                                    <span>{isCourseCompleted ? '🎉 ಅಭಿನಂದನೆಗಳು! (Congratulations!)' : 'ಮುಂದುವರಿಸಿ (Continue)'}</span>
                                 </h3>
                                 <motion.div
                                     className="glass-card"
-                                    style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                    style={{
+                                        padding: '2.5rem',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        background: isCourseCompleted ? 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.05) 0%, rgba(245, 158, 11, 0.05) 100%)' : 'var(--bg-card)',
+                                        border: isCourseCompleted ? '2px solid var(--primary)' : '1px solid var(--border)'
+                                    }}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                 >
                                     <div style={{ flex: 1 }}>
-                                        <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.8rem' }}>{currentLesson.level}</span>
-                                        <h2 style={{ margin: '0.5rem 0' }}>{currentLesson.title}</h2>
-                                        <div style={{ maxWidth: '400px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
-                                                <span>ಪ್ರಗತಿ (Progress)</span>
-                                                <span>{currentLesson.progress || 0}%</span>
-                                            </div>
-                                            <div className="progress-bar">
-                                                <motion.div
-                                                    className="progress-fill"
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${currentLesson.progress || 0}%` }}
-                                                    transition={{ duration: 1 }}
-                                                ></motion.div>
-                                            </div>
-                                        </div>
+                                        {isCourseCompleted ? (
+                                            <>
+                                                <h2 style={{ margin: 0, color: 'var(--text-main)' }}>ನೀವು ಎಲ್ಲಾ ಪಾಠಗಳನ್ನು ಮುಗಿಸಿದ್ದೀರಿ!</h2>
+                                                <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>You've mastered the entire course. Keep practicing to stay sharp!</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{currentLesson.level} English</span>
+                                                <h2 style={{ margin: '0.5rem 0', fontSize: '1.75rem' }}>{currentLesson.title}</h2>
+                                                <div style={{ maxWidth: '450px', marginTop: '1.5rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                                                        <span style={{ color: 'var(--text-main)' }}>ಪ್ರಗತಿ (Progress)</span>
+                                                        <span style={{ color: 'var(--primary)' }}>{currentLesson.progress || 0}%</span>
+                                                    </div>
+                                                    <div className="progress-bar" style={{ height: '10px', background: 'rgba(var(--primary-rgb), 0.1)' }}>
+                                                        <motion.div
+                                                            className="progress-fill"
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${currentLesson.progress || 0}%` }}
+                                                            transition={{ duration: 1, ease: "easeOut" }}
+                                                            style={{ boxShadow: '0 0 12px rgba(var(--primary-rgb), 0.4)' }}
+                                                        ></motion.div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                     <button
                                         className="btn btn-primary"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                                        disabled={!lessons.length}
-                                        onClick={() => onStartLesson && onStartLesson(currentLesson)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.75rem',
+                                            padding: '1rem 2rem',
+                                            fontSize: '1rem',
+                                            boxShadow: '0 10px 15px -3px rgba(var(--primary-rgb), 0.3)'
+                                        }}
+                                        disabled={!lessons.length && !isCourseCompleted}
+                                        onClick={() => {
+                                            if (isCourseCompleted) {
+                                                window.location.hash = '#/library'; // Or use onNavigate if available
+                                            } else {
+                                                onStartLesson && onStartLesson(currentLesson);
+                                            }
+                                        }}
                                     >
-                                        <Play size={18} fill="currentColor" />
-                                        <span>ಪ್ರಾರಂಭಿಸಿ (Start)</span>
+                                        {isCourseCompleted ? (
+                                            <><span>ಲೈಬ್ರರಿ ನೋಡಿ (View Library)</span></>
+                                        ) : (
+                                            <>
+                                                <Play size={20} fill="currentColor" />
+                                                <span>ಪ್ರಾರಂಭಿಸಿ (Start)</span>
+                                            </>
+                                        )}
                                     </button>
                                 </motion.div>
                             </section>
@@ -217,17 +251,10 @@ const Dashboard = ({ user, onStartLesson }) => {
                                     {levels.map((lvl, index) => {
                                         const lessonsInLevel = lessons.filter(l => l.level === lvl);
 
-                                        // Level Locking Logic
-                                        let isLocked = false;
-                                        if (index > 0) {
-                                            const prevLevel = levels[index - 1];
-                                            const lessonsInPrevLevel = lessons.filter(l => l.level === prevLevel);
-                                            if (lessonsInPrevLevel.length > 0) {
-                                                const totalProg = lessonsInPrevLevel.reduce((acc, l) => acc + (l.progress || 0), 0);
-                                                const avgProg = Math.round(totalProg / lessonsInPrevLevel.length);
-                                                isLocked = avgProg < 100;
-                                            }
-                                        }
+                                        // Robust locking: Module is locked if any lesson in any previous level is incomplete
+                                        const prevLevels = levels.slice(0, index);
+                                        const lessonsInPrevLevels = lessons.filter(l => prevLevels.includes(l.level));
+                                        const isLocked = !isAdmin && index > 0 && (lessonsInPrevLevels.length === 0 || lessonsInPrevLevels.some(l => (l.progress || 0) < 100));
 
                                         const isExpanded = expandedLevel === lvl;
 

@@ -95,7 +95,7 @@ const LessonCreate = ({ lesson, onBack }) => {
                 type: q.type,
                 correct_answer: q.correct_answer,
                 points: q.points || 10,
-                options: q.options ? q.options.join(', ') : '',
+                options: q.options || [],
                 explanation: q.explanation || ''
             })));
         } catch (err) {
@@ -277,6 +277,129 @@ const LessonCreate = ({ lesson, onBack }) => {
         e.target.value = null;
     };
 
+    const prefillFormFromJSON = (json) => {
+        // Handle hierarchical metadata and content
+        const metadata = json.course_metadata || {};
+        const content = json.lesson_content || json;
+
+        const levelMap = { 1: 'Basic', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert' };
+
+        // 1. Basic Details
+        setFormData(prev => ({
+            ...prev,
+            title: metadata.topic || json.title || prev.title,
+            level: levelMap[metadata.level] || json.level || prev.level,
+            description: content.explanation?.kannada || json.description || prev.description,
+            transcription: content.listening_lab?.script
+                ? content.listening_lab.script.map(s => {
+                    const lineEn = s.en || s.line || '';
+                    const lineKn = s.kn || '';
+                    return lineKn ? `${s.speaker}: ${lineEn} (${lineKn})` : `${s.speaker}: ${lineEn}`;
+                }).join('\n')
+                : (json.listening?.transcription || prev.transcription)
+        }));
+
+        const formatAsArrayContent = (val) => {
+            if (!val) return '[]';
+            if (Array.isArray(val)) return JSON.stringify(val, null, 2);
+            return JSON.stringify([val], null, 2);
+        };
+
+        // 2. Study Logic / Explanation
+        if (content.explanation) {
+            const studyLogic = [{
+                explanation: content.explanation.kannada || '',
+                english_logic: content.explanation.english_logic || '',
+                kannadaStructure: [],
+                englishStructure: []
+            }];
+            setStudyContentRaw(JSON.stringify(studyLogic, null, 2));
+        } else if (json.logicContent) {
+            setStudyContentRaw(formatAsArrayContent(json.logicContent));
+        }
+
+        // 3. Sentence Evolution (supporting both 'stage' and 'level' keys)
+        if (content.sentence_evolution) {
+            const evolution = content.sentence_evolution.map(step => ({
+                level: step.stage || step.level || 'Basic',
+                explanation: step.explanation || '',
+                english: step.english || '',
+                kannada: step.kannada || ''
+            }));
+            setEvolutionContentRaw(JSON.stringify(evolution, null, 2));
+        } else if (json.evolutionContent) {
+            setEvolutionContentRaw(formatAsArrayContent(json.evolutionContent));
+        }
+
+        // 4. Reading Lab
+        if (content.reading_lab) {
+            const readingData = [{
+                text: content.reading_lab.text || '',
+                pronunciation: content.reading_lab.phonetic_kannada || '',
+                translation: ''
+            }];
+            setReadingContentRaw(JSON.stringify(readingData, null, 2));
+        } else if (json.readingContent) {
+            setReadingContentRaw(formatAsArrayContent(json.readingContent));
+        }
+
+        // 5. Vocabulary / Retention
+        if (content.retention_block?.gold_list) {
+            const bridge = content.retention_block.mnemonic_bridge;
+            const vocabData = content.retention_block.gold_list.map((item, idx) => ({
+                word: item.word,
+                translation: item.kn || item.kannada || '',
+                pronunciation: item.pronunciation || '',
+                mnemonic: (idx === 0 && bridge) ? `${bridge.concept || bridge.word || ''}: ${bridge.logic || bridge.trick || ''}` : '',
+                category: 'The Gold List'
+            }));
+            setVocabularyContentRaw(JSON.stringify(vocabData, null, 2));
+        } else if (json.vocabularyContent) {
+            setVocabularyContentRaw(formatAsArrayContent(json.vocabularyContent));
+        }
+
+        const rawQuestions = content.milestone_test || json.milestoneTest || content.milestoneTest || [];
+        if (rawQuestions.length > 0) {
+            const normalizedQuestions = rawQuestions.map(q => ({
+                ...q,
+                text: q.question || q.text || '',
+                correct_answer: q.correct_answer || q.answer || '',
+                type: q.type || 'MCQ',
+                points: q.points || 10,
+                options: q.options || [],
+                explanation: q.explanation || ''
+            }));
+            setQuestions(normalizedQuestions);
+        }
+
+        setMessage('Data pre-filled successfully. Please review each tab.');
+        setGeneratedContentPreview(JSON.stringify(json, null, 2));
+    };
+
+    const handleJsonUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.type !== "application/json" && !file.name.endsWith('.json')) {
+            alert("Please upload a valid JSON file.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const json = JSON.parse(event.target.result);
+                prefillFormFromJSON(json);
+            } catch (err) {
+                console.error("JSON Parse Error:", err);
+                alert("Failed to parse JSON file. Please ensure it's a valid JSON structure.");
+            }
+        };
+        reader.readAsText(file);
+        // Reset input value to allow uploading the same file again
+        e.target.value = '';
+    };
+
     const handleAIGenerate = async () => {
         if (!aiPrompt) {
             alert("Please enter a topic or prompt for AI generation.");
@@ -286,67 +409,8 @@ const LessonCreate = ({ lesson, onBack }) => {
         try {
             const res = await aiApi.generateLessonContent({ prompt: aiPrompt, engine: aiEngine });
             const generatedJson = res.data.content;
-
-            // Map the parsed JSON to our form states
-            setFormData(prev => ({
-                ...prev,
-                title: generatedJson.title || prev.title,
-                description: generatedJson.description || prev.description,
-                transcription: generatedJson.listening?.transcription || prev.transcription
-            }));
-
-            // Format content if it's an object/array (prevents [object Object])
-            const formatContent = (val) => {
-                if (!val) return '';
-                if (typeof val === 'string') return val;
-                try {
-                    return JSON.stringify(val, null, 2);
-                } catch (e) {
-                    return String(val);
-                }
-            };
-
-            // Format content into arrays with robust fallbacks
-            const ensureArray = (val, type) => {
-                if (!val) return '[]';
-                if (Array.isArray(val)) return JSON.stringify(val, null, 2);
-
-                // If AI returned a string instead of an array, attempt to wrap it
-                if (typeof val === 'string') {
-                    try {
-                        const parsed = JSON.parse(val);
-                        if (Array.isArray(parsed)) return JSON.stringify(parsed, null, 2);
-                    } catch (e) { /* Not JSON string, continue to wrapping */ }
-
-                    // Wrap based on type
-                    switch (type) {
-                        case 'logic': return JSON.stringify([{ explanation: val, kannadaStructure: [], englishStructure: [] }], null, 2);
-                        case 'evolution': return JSON.stringify([{ level: 'Level 1', explanation: val, english: '', kannada: '' }], null, 2);
-                        case 'reading': return JSON.stringify([{ text: val, pronunciation: '', translation: '' }], null, 2);
-                        case 'vocabulary': return JSON.stringify([{ word: val, translation: '', mnemonic: '', category: '' }], null, 2);
-                        default: return '[]';
-                    }
-                }
-                return JSON.stringify([val], null, 2); // Final fallback: wrap whatever it is
-            };
-
-            setStudyContentRaw(ensureArray(generatedJson.logicContent, 'logic'));
-            setEvolutionContentRaw(ensureArray(generatedJson.evolutionContent, 'evolution'));
-            setReadingContentRaw(ensureArray(generatedJson.readingContent, 'reading'));
-            setVocabularyContentRaw(ensureArray(generatedJson.vocabularyContent, 'vocabulary'));
-
-            if (generatedJson.milestoneTest) {
-                // Ensure correct_answer is mapped from 'answer' or 'correct_answer'
-                const normalizedQuestions = generatedJson.milestoneTest.map(q => ({
-                    ...q,
-                    text: q.text || q.question || '',
-                    correct_answer: q.correct_answer || q.answer || ''
-                }));
-                setQuestions(normalizedQuestions);
-            }
-
+            prefillFormFromJSON(generatedJson);
             setMessage('Content generated and pre-filled. Please review each tab.');
-            setGeneratedContentPreview(JSON.stringify(generatedJson, null, 2));
         } catch (err) {
             console.error(err);
             alert("Failed to generate content: " + (err.response?.data?.message || err.message));
@@ -449,7 +513,7 @@ const LessonCreate = ({ lesson, onBack }) => {
                                 />
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                                <button className="btn" onClick={() => setCurrentTab('ai-gen')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                <button className="btn" onClick={() => setCurrentTab('ai-gen')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
                                     ← Back to AI Auto-Gen
                                 </button>
                                 <button className="btn btn-primary" onClick={() => setCurrentTab('study')} style={{ padding: '0.8rem 3rem' }}>
@@ -469,7 +533,7 @@ const LessonCreate = ({ lesson, onBack }) => {
                                 <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>Lesson Logic Breakdown (Magic Shift)</label>
                                 <textarea
                                     className="glass-card"
-                                    style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', minHeight: '150px' }}
+                                    style={{ width: '100%', padding: '1rem', background: 'var(--bg-dark)', border: '1px solid var(--border)', minHeight: '150px', color: 'var(--text-main)' }}
                                     placeholder='Define the grammar rules and sentence structures here as JSON or text...'
                                     value={studyContentRaw}
                                     onChange={(e) => setStudyContentRaw(e.target.value)}
@@ -480,7 +544,7 @@ const LessonCreate = ({ lesson, onBack }) => {
                                 <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>Sentence Evolution Steps</label>
                                 <textarea
                                     className="glass-card"
-                                    style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', minHeight: '150px' }}
+                                    style={{ width: '100%', padding: '1rem', background: 'var(--bg-dark)', border: '1px solid var(--border)', minHeight: '150px', color: 'var(--text-main)' }}
                                     placeholder='Step-by-step sentence growth...'
                                     value={evolutionContentRaw}
                                     onChange={(e) => setEvolutionContentRaw(e.target.value)}
@@ -488,7 +552,7 @@ const LessonCreate = ({ lesson, onBack }) => {
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                                <button className="btn" onClick={() => setCurrentTab('details')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                <button className="btn" onClick={() => setCurrentTab('details')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
                                     ← Back to Details
                                 </button>
                                 <button className="btn btn-primary" onClick={() => setCurrentTab('reading')} style={{ padding: '0.8rem 3rem' }}>
@@ -505,12 +569,12 @@ const LessonCreate = ({ lesson, onBack }) => {
                             </h3>
                             <textarea
                                 className="glass-card"
-                                style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', minHeight: '300px' }}
+                                style={{ width: '100%', padding: '1rem', background: 'var(--bg-dark)', border: '1px solid var(--border)', minHeight: '300px', color: 'var(--text-main)' }}
                                 value={readingContentRaw}
                                 onChange={(e) => setReadingContentRaw(e.target.value)}
                             />
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                                <button className="btn" onClick={() => setCurrentTab('study')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                <button className="btn" onClick={() => setCurrentTab('study')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
                                     ← Back to Study
                                 </button>
                                 <button className="btn btn-primary" onClick={() => setCurrentTab('vocabulary')} style={{ padding: '0.8rem 3rem' }}>
@@ -527,12 +591,12 @@ const LessonCreate = ({ lesson, onBack }) => {
                             </h3>
                             <textarea
                                 className="glass-card"
-                                style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', minHeight: '300px' }}
+                                style={{ width: '100%', padding: '1rem', background: 'var(--bg-dark)', border: '1px solid var(--border)', minHeight: '300px', color: 'var(--text-main)' }}
                                 value={vocabularyContentRaw}
                                 onChange={(e) => setVocabularyContentRaw(e.target.value)}
                             />
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                                <button className="btn" onClick={() => setCurrentTab('reading')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                <button className="btn" onClick={() => setCurrentTab('reading')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
                                     ← Back to Reading
                                 </button>
                                 <button className="btn btn-primary" onClick={() => setCurrentTab('media')} style={{ padding: '0.8rem 3rem' }}>
@@ -575,24 +639,57 @@ const LessonCreate = ({ lesson, onBack }) => {
                                     </div>
 
                                     {!generating && (
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={handleAIGenerate}
-                                            style={{
-                                                width: '100%',
-                                                padding: '1rem',
-                                                marginTop: '0.5rem',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: '0.75rem',
-                                                background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                                                boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
-                                            }}
-                                        >
-                                            <Wand2 size={20} />
-                                            Generate with AI
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                            <button
+                                                className="btn btn-primary"
+                                                onClick={handleAIGenerate}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '1rem',
+                                                    marginTop: '0.5rem',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.75rem',
+                                                    background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                                                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
+                                                }}
+                                            >
+                                                <Wand2 size={20} />
+                                                Generate with AI
+                                            </button>
+
+                                            <div style={{ flex: 1 }}>
+                                                <input
+                                                    type="file"
+                                                    accept=".json"
+                                                    id="json-upload"
+                                                    style={{ display: 'none' }}
+                                                    onChange={handleJsonUpload}
+                                                />
+                                                <label
+                                                    htmlFor="json-upload"
+                                                    className="btn"
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '1rem',
+                                                        marginTop: '0.5rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.75rem',
+                                                        background: 'var(--bg-card)',
+                                                        border: '1px solid var(--primary)',
+                                                        color: 'var(--primary)',
+                                                        cursor: 'pointer',
+                                                        fontWeight: 600
+                                                    }}
+                                                >
+                                                    <Upload size={20} />
+                                                    Upload JSON to Prefill
+                                                </label>
+                                            </div>
+                                        </div>
                                     )}
 
                                     {generating && (
@@ -682,7 +779,7 @@ const LessonCreate = ({ lesson, onBack }) => {
                                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Text placed here will appear as a synced transcription if an audio track is provided, or act as general reading material. This gets auto-filled if the AI generates a listening section.</p>
                                 <textarea
                                     className="glass-card"
-                                    style={{ width: '100%', padding: '1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', height: '150px' }}
+                                    style={{ width: '100%', padding: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border)', height: '150px', color: 'var(--text-main)' }}
                                     placeholder="Enter audio transcription here..."
                                     value={formData.transcription}
                                     onChange={(e) => setFormData({ ...formData, transcription: e.target.value })}
@@ -700,7 +797,7 @@ const LessonCreate = ({ lesson, onBack }) => {
                             )}
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
-                                <button className="btn" onClick={() => setCurrentTab('vocabulary')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-dark)', border: '1px solid var(--border)' }}>
+                                <button className="btn" onClick={() => setCurrentTab('vocabulary')} style={{ padding: '0.8rem 2rem', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
                                     ← Back to Vocabulary
                                 </button>
                                 <button className="btn btn-primary" onClick={() => setCurrentTab('questions')} style={{ padding: '0.8rem 3rem' }}>

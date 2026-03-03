@@ -127,7 +127,7 @@ const MilestoneTest = ({ testContent, lessonId, onComplete }) => {
 
                         {isMCQ ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {q.options.map((option, optIdx) => {
+                                {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? q.options.split(',').map(o => o.trim()) : [])).map((option, optIdx) => {
                                     const isSelected = userAnswer === option;
                                     const isCorrectOption = option === q.correct_answer;
 

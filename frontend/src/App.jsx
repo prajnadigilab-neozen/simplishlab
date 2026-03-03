@@ -39,6 +39,7 @@ function AppShell() {
       return null;
     }
   });
+  const [courseCompleted, setCourseCompleted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const showToast = useToast();
   const navigate = useNavigate();
@@ -105,28 +106,69 @@ function AppShell() {
       return;
     }
 
-    if (view === 'study_area' && !selectedLesson) {
-      // Try to find the most recent lesson if none is selected
-      try {
-        const res = await api.get('/lessons/me/progress');
-        const lessons = Array.isArray(res.data) ? res.data : (res.data.lessons || []);
-        const lastLesson = lessons.find(l => l.status === 'started') || lessons[0];
+    if (view === 'study_area') {
+      setCourseCompleted(false);
 
-        if (lastLesson) {
-          startLesson(lastLesson);
-          return;
-        } else {
-          showToast('Please select a lesson from Library first', 'info');
+      // logic to decide which lesson to show
+      let targetLesson = selectedLesson;
+
+      // If no lesson selected OR current lesson is already completed, find the next best one
+      if (!targetLesson || targetLesson.status === 'completed') {
+        try {
+          const res = await api.get('/lessons/my-progress');
+          const lessons = Array.isArray(res.data) ? res.data : (res.data.lessons || []);
+
+          // Find first incomplete
+          const nextIncomplete = lessons.find(l => l.status !== 'completed');
+
+          if (nextIncomplete) {
+            startLesson(nextIncomplete);
+            return;
+          } else if (lessons.length > 0) {
+            // All lessons completed
+            setCourseCompleted(true);
+            setSelectedLesson(lessons[lessons.length - 1]);
+            navigate('/study_area');
+            return;
+          } else {
+            showToast('ಲೈಬ್ರರಿಯಲ್ಲಿ ಮೊದಲು ಪಾಠವನ್ನು ಆಯ್ಕೆಮಾಡಿ (Please select a lesson from Library first)', 'info');
+            navigate('/library');
+            return;
+          }
+        } catch (err) {
+          console.error("Study area discovery failed", err);
           navigate('/library');
           return;
         }
-      } catch (err) {
-        navigate('/library');
-        return;
       }
     }
 
     navigate(`/${view}`);
+  };
+
+  const handleNextLesson = async () => {
+    try {
+      const res = await api.get('/lessons/my-progress');
+      const lessons = Array.isArray(res.data) ? res.data : (res.data.lessons || []);
+      const currentIndex = lessons.findIndex(l => l.id === selectedLesson?.id);
+
+      if (currentIndex !== -1 && currentIndex < lessons.length - 1) {
+        const nextLesson = lessons[currentIndex + 1];
+        startLesson(nextLesson);
+      } else {
+        // Course completion check
+        const allDone = lessons.every(l => l.status === 'completed' || l.id === selectedLesson?.id);
+        if (allDone) {
+          setCourseCompleted(true);
+        } else {
+          showToast('ಅದ್ಭುತ! ನೀವು ಈ ಪಾಠವನ್ನು ಮುಗಿಸಿದ್ದೀರಿ. (Great job! You finished this lesson.)', 'success');
+          navigate('/library');
+        }
+      }
+    } catch (err) {
+      console.error("Next lesson navigation failed", err);
+      navigate('/library');
+    }
   };
 
   const startLesson = (lesson) => {
@@ -220,7 +262,13 @@ function AppShell() {
 
             <Route path="/study_area" element={
               selectedLesson
-                ? <UniversalStudyArea user={user} lesson={selectedLesson} onBack={() => navigate('/library')} />
+                ? <UniversalStudyArea
+                  user={user}
+                  lesson={selectedLesson}
+                  isCourseCompleted={courseCompleted}
+                  onNextLesson={handleNextLesson}
+                  onBack={() => navigate('/library')}
+                />
                 : <Navigate to="/library" replace />
             } />
 

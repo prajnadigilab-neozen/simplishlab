@@ -7,7 +7,9 @@
   --primary-light: #e0e7ff;
   --accent: #f59e0b;
   /* Heritage Amber for encouragement */
+  --primary-rgb: 0, 82, 204;
   --text-main: #0f172a;
+  --text-main-rgb: 15, 23, 42;
   /* Near-black for maximum contrast */
   --text-muted: #475569;
   --border: #cbd5e1;
@@ -41,20 +43,15 @@
 
 [data-theme='dark'] {
   --bg-dark: #0f172a;
-  /* Deep Slate */
   --bg-card: #1e293b;
-  /* Slate-800 */
   --primary: #3b82f6;
-  /* Brighter blue for dark contrast */
-  --primary-light: rgba(59, 130, 246, 0.1);
+  --primary-rgb: 59, 130, 246;
+  --primary-light: rgba(59, 130, 246, 0.15);
   --accent: #fbbf24;
-  /* Brighter amber */
   --text-main: #f8fafc;
-  /* Near-white */
+  --text-main-rgb: 248, 250, 252;
   --text-muted: #94a3b8;
-  /* Slate-400 */
   --border: #334155;
-  /* Slate-700 */
   --nav-bg: #1e293b;
 
   /* Badges - Dark Mode */
@@ -257,9 +254,20 @@ h3 {
 .progress-bar {
   width: 100%;
   height: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(128, 128, 128, 0.25);
   border-radius: 4px;
   overflow: hidden;
+}
+
+input,
+textarea,
+select {
+  color: var(--text-main);
+}
+
+::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .progress-fill {

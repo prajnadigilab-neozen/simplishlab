@@ -80,7 +80,8 @@ const ProfileSettings = ({ user, onUpdate, onBack }) => {
         padding: '0.75rem 1rem 0.75rem 2.8rem',
         borderRadius: '12px',
         border: '1px solid var(--border)',
-        backgroundColor: '#f8fafc',
+        backgroundColor: 'var(--bg-dark)',
+        color: 'var(--text-main)',
         fontSize: '0.95rem',
         transition: 'all 0.2s',
         outline: 'none',
@@ -291,7 +292,8 @@ const ProfileSettings = ({ user, onUpdate, onBack }) => {
                                     onClick={onBack}
                                     style={{
                                         padding: '1rem 2rem',
-                                        background: '#f1f5f9',
+                                        background: 'var(--bg-dark)',
+                                        border: '1px solid var(--border)',
                                         color: 'var(--text-main)',
                                         borderRadius: '12px'
                                     }}
