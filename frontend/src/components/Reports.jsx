@@ -16,7 +16,9 @@ import {
 const Reports = () => {
     const [summary, setSummary] = useState(null);
     const [activity, setActivity] = useState([]);
+    const [showAllActivity, setShowAllActivity] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [lastUpdated, setLastUpdated] = useState(null);
 
     useEffect(() => {
         const loadData = async () => {
@@ -31,6 +33,7 @@ const Reports = () => {
                 console.error('Failed to load report data:', err);
             } finally {
                 setLoading(false);
+                setLastUpdated(new Date().toLocaleTimeString());
             }
         };
         loadData();
@@ -54,12 +57,21 @@ const Reports = () => {
     return (
         <div style={{ padding: '2rem', animation: 'fadeIn 0.5s ease-out' }}>
             <header style={{ marginBottom: '2.5rem' }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-                    System Analytics
-                </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
-                    Comprehensive metrics and learning activity overview.
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <div>
+                        <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                            System Analytics
+                        </h1>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', margin: 0 }}>
+                            Comprehensive metrics and learning activity overview.
+                        </p>
+                    </div>
+                    {lastUpdated && (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                            Last updated: {lastUpdated}
+                        </div>
+                    )}
+                </div>
             </header>
 
             {/* KPI Cards */}
@@ -133,22 +145,39 @@ const Reports = () => {
                         <h3 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <TrendingUp size={20} color="var(--primary)" /> Learner Activity
                         </h3>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                            View All <ArrowUpRight size={14} />
-                        </div>
+                        {activity.length > 10 && (
+                            <div
+                                onClick={() => setShowAllActivity(!showAllActivity)}
+                                style={{
+                                    fontSize: '0.85rem',
+                                    color: 'var(--primary)',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.5rem 0.75rem',
+                                    borderRadius: '8px',
+                                    background: 'rgba(var(--primary-rgb), 0.05)',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {showAllActivity ? 'Show Less' : `View All (${activity.length})`} <ArrowUpRight size={14} />
+                            </div>
+                        )}
                     </div>
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead>
                                 <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                                    <th style={{ paddingBottom: '1rem', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem' }}>STUDENT / LESSON</th>
-                                    <th style={{ paddingBottom: '1rem', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem' }}>STATUS</th>
-                                    <th style={{ paddingBottom: '1rem', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem' }}>SCORE</th>
-                                    <th style={{ paddingBottom: '1rem', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem' }}>LAST ACCESSED</th>
+                                    <th style={{ padding: '0 1rem 1rem 0', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem', minWidth: '200px' }}>STUDENT / LESSON</th>
+                                    <th style={{ padding: '0 1rem 1rem 0', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem', minWidth: '120px' }}>STATUS</th>
+                                    <th style={{ padding: '0 1rem 1rem 0', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem', minWidth: '80px' }}>SCORE</th>
+                                    <th style={{ padding: '0 1rem 1rem 0', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.85rem', minWidth: '150px' }}>LAST ACCESSED</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {activity.slice(0, 10).map((item, i) => {
+                                {(showAllActivity ? activity : activity.slice(0, 10)).map((item, i) => {
                                     const date = new Date(item.lastAccessed);
                                     const timeAgo = (date) => {
                                         const now = new Date();
@@ -209,7 +238,7 @@ const Reports = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

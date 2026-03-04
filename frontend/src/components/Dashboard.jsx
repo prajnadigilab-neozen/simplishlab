@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Loader2 } from 'lucide-react';
+import { Play, Loader2, CheckCircle2 } from 'lucide-react';
 import { lessonApi, placementApi, reportApi } from '../utils/api';
 
 const Dashboard = ({ user, onStartLesson }) => {
+    const getGrade = (score) => {
+        if (score === null || score === undefined) return '-';
+        if (score >= 90) return 'A+';
+        if (score >= 80) return 'A';
+        if (score >= 70) return 'B';
+        if (score >= 60) return 'C';
+        return 'D';
+    };
+
     const [lessons, setLessons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -275,7 +284,30 @@ const Dashboard = ({ user, onStartLesson }) => {
                                                     <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold' }}>MODULE {index + 1}</span>
                                                     {isLocked && <span style={{ fontSize: '1.2rem' }}>🔒</span>}
                                                 </div>
-                                                <h4 style={{ margin: '0 0 0.5rem 0' }}>{lvl} English</h4>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                                                    <h4 style={{ margin: 0 }}>{lvl} English</h4>
+                                                    {(() => {
+                                                        const exam = lessonsInLevel.find(l => l.content?.isExam || l.title?.toLowerCase().includes('graduation'));
+                                                        const isModuleCompleted = exam && exam.progress === 100;
+                                                        if (isModuleCompleted) {
+                                                            return (
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                    <span style={{
+                                                                        background: '#16a34a', color: 'white', padding: '0.1rem 0.5rem',
+                                                                        borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800,
+                                                                        display: 'flex', alignItems: 'center', gap: '0.25rem'
+                                                                    }}>
+                                                                        <CheckCircle2 size={10} /> COMPLETED
+                                                                    </span>
+                                                                    <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                                                                        {exam.score}% ({getGrade(exam.score)})
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
+                                                </div>
                                                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', flex: 1 }}>
                                                     {lessonsInLevel.length > 0
                                                         ? `Explore ${lessonsInLevel.length} active lessons in this module.`
@@ -342,9 +374,14 @@ const Dashboard = ({ user, onStartLesson }) => {
                                                             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                                                 {lessonsInLevel.map(l => (
                                                                     <li key={l.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', padding: '0.75rem', background: 'rgba(0,0,0,0.02)', borderRadius: '4px' }}>
-                                                                        <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '1rem' }} title={l.title}>
-                                                                            {l.title}
-                                                                        </span>
+                                                                        <div style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }} title={l.title}>
+                                                                            <span>{l.title}</span>
+                                                                            {l.score !== null && (
+                                                                                <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 'bold' }}>
+                                                                                    [{l.score}%]
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                         <span style={{
                                                                             fontWeight: 'bold',
                                                                             color: l.progress === 100 ? '#16a34a' : 'var(--text-main)',

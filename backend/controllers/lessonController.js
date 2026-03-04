@@ -132,13 +132,25 @@ exports.getMyLessonsProgress = async (req, res) => {
                     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
                 : null;
 
+            // Priority: Local progress score (latest) > Assessment result score
+            const finalScore = (up && up.score !== null && up.score !== undefined) ? up.score : (ar ? ar.score : null);
+
             return {
                 ...lesson,
                 progress: up ? up.completion_percentage : 0,
                 status: up ? up.status : 'not_started',
-                score: ar ? ar.score : null,
-                passed: ar ? ar.passed : null
+                score: finalScore,
+                passed: ar ? ar.passed : (finalScore >= 70) // Fallback for exams/lessons without assessment records
             };
+        });
+
+        // 6. Sort correctly: Module Order (Basic -> Intermediate -> Advanced -> Expert) THEN display_order
+        const levelOrder = { 'Basic': 1, 'Intermediate': 2, 'Advanced': 3, 'Expert': 4 };
+        enhancedLessons.sort((a, b) => {
+            const orderA = levelOrder[a.level] || 99;
+            const orderB = levelOrder[b.level] || 99;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.display_order || 0) - (b.display_order || 0);
         });
 
         res.json({ lessons: enhancedLessons });
@@ -257,16 +269,20 @@ exports.deleteLesson = async (req, res) => {
 exports.updateProgress = async (req, res) => {
     const userId = req.user?.id;
     const { lessonId } = req.params;
-    const { spentTimeMs, status, completionPercentage, lastActiveTab } = req.body;
+    const { spentTimeMs, status, completionPercentage, lastActiveTab, score } = req.body;
 
     try {
         const payload = {
             user_id: userId,
             lesson_id: lessonId,
-            spent_time_ms: spentTimeMs,
+            spent_time_ms: spentTimeMs || 0,
             status: status || 'started',
             completion_percentage: completionPercentage || 0
         };
+
+        if (score !== undefined) {
+            payload.score = score;
+        }
 
         if (lastActiveTab) {
             payload.last_active_tab = lastActiveTab;
@@ -275,11 +291,30 @@ exports.updateProgress = async (req, res) => {
         const { data, error } = await supabase
             .from('user_progress')
             .upsert(payload, { onConflict: 'user_id,lesson_id' })
-            .select()
-            .single();
+            .select();
 
-        if (error) throw error;
-        res.json({ message: 'Progress updated', progress: data });
+        if (error) {
+            // PostgreSQL code 42703 = undefined_column
+            if (error.code === '42703') {
+                console.warn("Database columns missing in user_progress. Attempting safe fallback...");
+                const safePayload = {
+                    user_id: payload.user_id,
+                    lesson_id: payload.lesson_id,
+                    status: payload.status,
+                    completion_percentage: payload.completion_percentage
+                };
+                const { data: safeData, error: safeError } = await supabase
+                    .from('user_progress')
+                    .upsert(safePayload, { onConflict: 'user_id,lesson_id' })
+                    .select();
+
+                if (safeError) throw safeError;
+                return res.json(safeData?.[0] || {});
+            }
+            throw error;
+        }
+
+        res.json(data?.[0] || {});
     } catch (error) {
         console.error('updateProgress error full details:', error);
         res.status(500).json({ message: 'Error updating progress', error: error.message || error.details || error.hint || error });

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Music, Video, ArrowRight, Loader2, Search, Edit, Trash2, Plus, Image } from 'lucide-react';
+import { FileText, Music, Video, ArrowRight, Loader2, Search, Edit, Trash2, Plus, Image, Trophy } from 'lucide-react';
 import { lessonApi } from '../utils/api';
 import { useToast } from './Toast';
 
-const Library = ({ user, onSelectLesson, onEditLesson, onAddLesson }) => {
+const Library = ({ user, onSelectLesson, onEditLesson, onAddLesson, onAddExam }) => {
     const [lessons, setLessons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -97,13 +97,22 @@ const Library = ({ user, onSelectLesson, onEditLesson, onAddLesson }) => {
                     <p style={{ color: 'var(--text-muted)' }}>Explore all your uploaded curriculum modules.</p>
                 </div>
                 {isMod && (
-                    <button
-                        className="btn btn-primary"
-                        onClick={onAddLesson}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem' }}
-                    >
-                        <Plus size={18} /> Add New Lesson
-                    </button>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={onAddExam}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: 'var(--bg-dark)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                        >
+                            <Trophy size={18} /> Add Module Exam
+                        </button>
+                        <button
+                            className="btn btn-primary"
+                            onClick={onAddLesson}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem' }}
+                        >
+                            <Plus size={18} /> Add New Lesson
+                        </button>
+                    </div>
                 )}
             </header>
 
@@ -202,10 +211,11 @@ const Library = ({ user, onSelectLesson, onEditLesson, onAddLesson }) => {
                                                         <div style={{
                                                             padding: '0.75rem',
                                                             borderRadius: '0.75rem',
-                                                            background: 'var(--primary-light)',
-                                                            color: 'var(--primary)'
+                                                            background: lesson.content?.isExam ? 'rgba(234, 179, 8, 0.15)' : 'var(--primary-light)',
+                                                            color: lesson.content?.isExam ? '#eab308' : 'var(--primary)',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
                                                         }}>
-                                                            {getIcon(lesson.media_type)}
+                                                            {lesson.content?.isExam ? <Trophy size={20} /> : getIcon(lesson.media_type)}
                                                         </div>
                                                         {isMod && (
                                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -248,7 +258,12 @@ const Library = ({ user, onSelectLesson, onEditLesson, onAddLesson }) => {
                                                     </div>
 
                                                     <div onClick={() => onSelectLesson(lesson)}>
-                                                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{lesson.title}</h3>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                            <h3 style={{ fontSize: '1.1rem', margin: 0 }}>{lesson.title}</h3>
+                                                            {lesson.content?.isExam && (
+                                                                <span style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.7rem', fontWeight: 'bold' }}>EXAM</span>
+                                                            )}
+                                                        </div>
                                                         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineBreak: 'anywhere' }}>
                                                             {lesson.description?.substring(0, 100)}{lesson.description?.length > 100 ? '...' : ''}
                                                         </p>

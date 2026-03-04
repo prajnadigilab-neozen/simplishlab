@@ -189,9 +189,9 @@ const LandingPage = ({ onAuthSuccess }) => {
                         background: 'white'
                     }}>
                         <img
-                            src={simplishLogo}
+                            src="/logo.png"
                             alt="SIMPLISH"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                         />
                     </div>
                     <span className="desktop-only" style={{ fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.02em', fontSize: '1.2rem' }}>SIMPLISH</span>
@@ -338,7 +338,7 @@ const LandingPage = ({ onAuthSuccess }) => {
                                 padding: '2px'
                             }}>
                                 <img
-                                    src={simplishLogo}
+                                    src="/logo.png"
                                     alt="SIMPLISH"
                                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                 />
@@ -445,9 +445,9 @@ const LandingPage = ({ onAuthSuccess }) => {
                         background: 'white'
                     }}>
                         <img
-                            src={simplishLogo}
+                            src="/logo.png"
                             alt="SIMPLISH"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                         />
                     </div>
                     <span style={{ fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.02em', fontSize: '1.1rem' }}>SIMPLISH</span>

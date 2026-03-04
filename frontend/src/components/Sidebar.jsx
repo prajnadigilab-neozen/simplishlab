@@ -64,6 +64,7 @@ const Sidebar = ({ onNavigate, currentView, user, onLogout, isOpen, onClose }) =
         }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <img src="/logo.png" alt="Logo" style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'contain' }} />
                     <h2 style={{ color: 'var(--primary)', fontWeight: 800, margin: 0 }}>SIMPLISH</h2>
                 </div>
                 <button
@@ -118,7 +119,11 @@ const Sidebar = ({ onNavigate, currentView, user, onLogout, isOpen, onClose }) =
                                         backgroundColor: currentView === item.id ? 'var(--primary-light)' : 'transparent'
                                     }}
                                 >
-                                    <item.icon size={18} color={currentView === item.id ? "var(--primary)" : "var(--text-muted)"} />
+                                    {item.id === 'study_area' ? (
+                                        <img src="/logo.png" alt="Study" style={{ width: '18px', height: '18px', borderRadius: '4px', filter: currentView === 'study_area' ? 'none' : 'grayscale(100%) opacity(0.6)' }} />
+                                    ) : (
+                                        <item.icon size={18} color={currentView === item.id ? "var(--primary)" : "var(--text-muted)"} />
+                                    )}
                                     <span style={{
                                         fontSize: '0.85rem',
                                         color: currentView === item.id ? 'var(--text-main)' : 'var(--text-muted)',

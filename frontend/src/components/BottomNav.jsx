@@ -50,7 +50,11 @@ const BottomNav = ({ onNavigate, currentView, user }) => {
                             padding: '0.5rem 0'
                         }}
                     >
-                        <item.icon size={22} color={isActive ? "var(--primary)" : "var(--text-muted)"} />
+                        {item.id === 'study_area' ? (
+                            <img src="/logo.png" alt="Study" style={{ width: '22px', height: '22px', borderRadius: '4px', filter: isActive ? 'none' : 'grayscale(100%) opacity(0.6)' }} />
+                        ) : (
+                            <item.icon size={22} color={isActive ? "var(--primary)" : "var(--text-muted)"} />
+                        )}
                         <span style={{
                             fontSize: '0.65rem',
                             fontWeight: isActive ? '700' : '500',

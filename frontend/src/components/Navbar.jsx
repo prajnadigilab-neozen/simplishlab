@@ -54,17 +54,7 @@ const Navbar = ({ toggleMobileMenu }) => {
                 >
                     <Menu size={24} />
                 </button>
-                <div style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    padding: '0.4rem',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    <Sparkles size={18} fill="currentColor" />
-                </div>
+                <img src="/logo.png" alt="Logo" style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'contain' }} />
                 <h1 style={{
                     fontSize: '1.25rem',
                     fontWeight: 800,
@@ -101,7 +91,7 @@ const Navbar = ({ toggleMobileMenu }) => {
                     {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
             </div>
-        </div>
+        </div >
     );
 };
 

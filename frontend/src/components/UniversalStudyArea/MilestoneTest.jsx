@@ -54,20 +54,23 @@ const MilestoneTest = ({ testContent, lessonId, onComplete }) => {
         setScore(finalScore);
         setSubmitted(true);
 
+        if (lessonId) {
+            try {
+                // Always save score, but only set completed status if passed
+                const isPassed = finalScore >= 70;
+                await lessonApi.updateProgress(lessonId, {
+                    status: isPassed ? 'completed' : 'started',
+                    score: finalScore,
+                    completionPercentage: isPassed ? 100 : 50 // Use 50% as a proxy for "started with attempt"
+                });
+                if (isPassed && onComplete) onComplete();
+            } catch (err) {
+                console.error("Failed to update test score to backend:", err);
+            }
+        }
+
         if (finalScore >= 70) {
             showToast(`ಆಹಾ! ಅದ್ಭುತ! (Great job!) You scored ${finalScore}%`, 'success');
-            if (lessonId && onComplete) {
-                try {
-                    await lessonApi.updateProgress(lessonId, {
-                        status: 'completed',
-                        score: finalScore,
-                        completionPercentage: 100
-                    });
-                    onComplete();
-                } catch (err) {
-                    console.error("Failed to update test score to backend:", err);
-                }
-            }
         } else {
             showToast(`You scored ${finalScore}%. Keep practicing!`, 'error');
         }

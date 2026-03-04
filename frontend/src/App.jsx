@@ -17,6 +17,7 @@ import PaymentGateway from './components/PaymentGateway';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import UniversalStudyArea from './components/UniversalStudyArea/UniversalStudyArea';
+import ExamUpload from './components/ExamUpload';
 
 // ── Auth Helpers ──────────────────────────────────────────────────────────
 function getStoredUser() {
@@ -41,6 +42,7 @@ function AppShell() {
   });
   const [courseCompleted, setCourseCompleted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const showToast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,7 +64,16 @@ function AppShell() {
   // ── Sync Profile on Load ────────────────────────────────────────────────
   React.useEffect(() => {
     const syncProfile = async () => {
-      // Even if no user in localStorage, we check backend because HTTP-only cookie might exist
+      // Check if we have any reason to believe a session exists 
+      // (Stored token or user flag). This avoids 401 console noise for guest visitors.
+      const storedToken = localStorage.getItem('simplish_token');
+      const storedUser = localStorage.getItem('simplish_user');
+
+      if (!storedToken && !storedUser) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await api.get('/auth/profile');
         if (res.data?.user) {
@@ -71,15 +82,15 @@ function AppShell() {
           setUser(updatedUser);
         }
       } catch (err) {
-        console.log('No active session found via cookies.');
-        // If we had a user but fetch failed, session might be expired
-        if (user) {
-          localStorage.removeItem('simplish_user');
-          localStorage.removeItem('simplish_token');
-          localStorage.removeItem('simplish_active_lesson');
-          setUser(null);
-          setSelectedLesson(null);
-        }
+        console.log('No active session found or session expired.');
+        // If we had a session but it expired, clear it
+        localStorage.removeItem('simplish_user');
+        localStorage.removeItem('simplish_token');
+        localStorage.removeItem('simplish_active_lesson');
+        setUser(null);
+        setSelectedLesson(null);
+      } finally {
+        setLoading(false);
       }
     };
     syncProfile();
@@ -116,7 +127,16 @@ function AppShell() {
       if (!targetLesson || targetLesson.status === 'completed') {
         try {
           const res = await api.get('/lessons/my-progress');
-          const lessons = Array.isArray(res.data) ? res.data : (res.data.lessons || []);
+          let lessons = Array.isArray(res.data) ? res.data : (res.data.lessons || []);
+
+          // Fail-safe: Ensure lessons are sorted by level and then display_order
+          const levelOrder = { 'Basic': 1, 'Intermediate': 2, 'Advanced': 3, 'Expert': 4 };
+          lessons.sort((a, b) => {
+            const orderA = levelOrder[a.level] || 99;
+            const orderB = levelOrder[b.level] || 99;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.display_order || 0) - (b.display_order || 0);
+          });
 
           // Find first incomplete
           const nextIncomplete = lessons.find(l => l.status !== 'completed');
@@ -149,7 +169,17 @@ function AppShell() {
   const handleNextLesson = async () => {
     try {
       const res = await api.get('/lessons/my-progress');
-      const lessons = Array.isArray(res.data) ? res.data : (res.data.lessons || []);
+      let lessons = Array.isArray(res.data) ? res.data : (res.data.lessons || []);
+
+      // Fail-safe: Ensure lessons are sorted by level and then display_order
+      const levelOrder = { 'Basic': 1, 'Intermediate': 2, 'Advanced': 3, 'Expert': 4 };
+      lessons.sort((a, b) => {
+        const orderA = levelOrder[a.level] || 99;
+        const orderB = levelOrder[b.level] || 99;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.display_order || 0) - (b.display_order || 0);
+      });
+
       const currentIndex = lessons.findIndex(l => l.id === selectedLesson?.id);
 
       if (currentIndex !== -1 && currentIndex < lessons.length - 1) {
@@ -176,6 +206,19 @@ function AppShell() {
     localStorage.setItem('simplish_active_lesson', JSON.stringify(lesson));
     navigate('/study_area');
   };
+
+  if (loading) {
+    return (
+      <div style={{
+        height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-main)', color: 'var(--primary)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="loader" style={{ marginBottom: '1rem' }}></div>
+          <p>Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LandingPage onAuthSuccess={handleAuthSuccess} />;
@@ -251,6 +294,14 @@ function AppShell() {
                   setSelectedLesson(null);
                   navigate('/admin');
                 }}
+                onAddExam={() => {
+                  const role = user.role?.toLowerCase();
+                  if (role !== 'moderator' && role !== 'admin' && role !== 'super_admin') {
+                    showToast('Access Denied: Admin access required', 'error');
+                    return;
+                  }
+                  navigate('/exam_upload');
+                }}
               />
             } />
 
@@ -297,6 +348,12 @@ function AppShell() {
             <Route path="/admin" element={
               (user.role?.toLowerCase() === 'moderator' || user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'super_admin')
                 ? <LessonCreate lesson={null} onBack={() => navigate('/library')} />
+                : <Navigate to="/" replace />
+            } />
+
+            <Route path="/exam_upload" element={
+              (user.role?.toLowerCase() === 'moderator' || user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'super_admin')
+                ? <ExamUpload onBack={() => navigate('/library')} />
                 : <Navigate to="/" replace />
             } />
 
