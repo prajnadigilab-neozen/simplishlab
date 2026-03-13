@@ -79,6 +79,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                             <input
                                 type="text"
                                 required
+                                autoComplete="name"
                                 style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.8rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
                                 placeholder="John Doe"
                                 value={formData.fullName}
@@ -95,6 +96,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                         <input
                             type="tel"
                             required
+                            autoComplete="username"
                             style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.8rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
                             placeholder="9876543210"
                             value={formData.phone}
@@ -111,6 +113,7 @@ const AuthForm = ({ onLoginSuccess }) => {
                         <input
                             type="password"
                             required
+                            autoComplete={isRegister ? "new-password" : "current-password"}
                             style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.8rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-dark)', color: 'var(--text-main)' }}
                             placeholder="••••••••"
                             value={formData.password}

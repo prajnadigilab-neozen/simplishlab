@@ -8,15 +8,23 @@ const Tesseract = require('tesseract.js');
  */
 exports.extractTextFromImage = async (imagePath) => {
     try {
-        console.log(`Starting OCR for: ${imagePath}`);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`Starting OCR for: ${imagePath}`);
+        }
         const { data: { text } } = await Tesseract.recognize(
             imagePath,
             'eng+kan', // Support English and Kannada
             {
-                logger: m => console.log(`[OCR Progress] ${m.status}: ${Math.round(m.progress * 100)}%`)
+                logger: m => {
+                    if (process.env.NODE_ENV !== 'production') {
+                        console.log(`[OCR Progress] ${m.status}: ${Math.round(m.progress * 100)}%`);
+                    }
+                }
             }
         );
-        console.log('OCR Extraction Complete.');
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('OCR Extraction Complete.');
+        }
         return text.trim();
     } catch (error) {
         console.error("OCR Error:", error);

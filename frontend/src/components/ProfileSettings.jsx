@@ -202,6 +202,7 @@ const ProfileSettings = ({ user, onUpdate, onBack }) => {
                                     onChange={e => setForm({ ...form, fullName: e.target.value })}
                                     placeholder="Enter your full name"
                                     required
+                                    autoComplete="name"
                                 />
                             </div>
 
@@ -216,6 +217,7 @@ const ProfileSettings = ({ user, onUpdate, onBack }) => {
                                         onChange={e => setForm({ ...form, email: e.target.value })}
                                         placeholder="email@example.com"
                                         required
+                                        autoComplete="email"
                                     />
                                 </div>
                                 <div style={{ position: 'relative' }}>
@@ -229,6 +231,7 @@ const ProfileSettings = ({ user, onUpdate, onBack }) => {
                                         placeholder="9876543210"
                                         required
                                         maxLength={10}
+                                        autoComplete="tel"
                                     />
                                 </div>
                             </div>
@@ -264,6 +267,7 @@ const ProfileSettings = ({ user, onUpdate, onBack }) => {
                                     value={form.password}
                                     onChange={e => setForm({ ...form, password: e.target.value })}
                                     placeholder="Leave blank to keep current password"
+                                    autoComplete="new-password"
                                 />
                             </div>
 

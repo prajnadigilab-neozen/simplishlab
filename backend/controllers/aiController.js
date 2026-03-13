@@ -41,6 +41,7 @@ Guidelines:
       generationConfig: {
         temperature: 0.7,
         topP: 0.95,
+        maxOutputTokens: 500, // Rule 14: Cost capping
       }
     });
 
@@ -157,6 +158,7 @@ Ensure the output is ONLY valid JSON. Include exactly 4 evolution stages, 5 gold
         responseMimeType: "application/json",
         temperature: 0.7,
         topP: 0.95,
+        maxOutputTokens: 2048, // Rule 14: Cost capping for large lesson objects
       }
     });
 

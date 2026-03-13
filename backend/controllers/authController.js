@@ -314,7 +314,7 @@ exports.getAllUsers = async (req, res) => {
 
     try {
         // Create a fresh client to ensure service role bypasses any stateful RLS
-        const adminClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        const adminClient = createClient(process.env.SUPABASE_URL?.trim(), process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 
         // Get total count first
         const { count, error: countError } = await adminClient
@@ -447,21 +447,23 @@ exports.deleteUser = async (req, res) => {
     const actorId = req.user?.id;
 
     try {
-        // Soft delete: Update status to 'deleted' and wipe progress
+        // Rule 21: GDPR Compliance — Hard delete, not soft delete
+        // 1. Delete progress
+        await supabase.from('user_progress').delete().eq('user_id', id);
+        
+        // 2. Delete Profile
         const { error: profileError } = await supabase
             .from('users')
-            .update({
-                status: 'deleted',
-                deleted_at: new Date().toISOString()
-            })
+            .delete()
             .eq('id', id);
 
         if (profileError) throw profileError;
 
-        // Wipe progress
-        await supabase.from('user_progress').delete().eq('user_id', id);
+        // 3. Delete Auth User (Supabase Admin)
+        const { error: authError } = await supabase.auth.admin.deleteUser(id);
+        if (authError) throw authError;
 
-        res.json({ message: 'User deleted (soft) and progress wiped' });
+        res.json({ message: 'User permanently deleted (GDPR compliant)' });
     } catch (err) {
         console.error('deleteUser error:', err);
         res.status(500).json({ message: 'Error deleting user' });
@@ -497,21 +499,24 @@ exports.deleteMe = async (req, res) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     try {
-        // Soft delete for the user themselves
+        // Rule 21: GDPR Compliance — Hard delete, not soft delete
+        // 1. Delete progress
+        await supabase.from('user_progress').delete().eq('user_id', userId);
+        
+        // 2. Delete Profile (this usually cascades if FK is set, but better safe)
         const { error: profileError } = await supabase
             .from('users')
-            .update({
-                status: 'deleted',
-                deleted_at: new Date().toISOString()
-            })
+            .delete()
             .eq('id', userId);
 
         if (profileError) throw profileError;
 
-        // Wipe progress
-        await supabase.from('user_progress').delete().eq('user_id', userId);
+        // 3. Delete Auth Account
+        const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+        if (authError) throw authError;
 
-        res.json({ message: 'Account deleted successfully' });
+        res.clearCookie('simplish_session');
+        res.json({ message: 'Your account has been permanently deleted.' });
     } catch (err) {
         console.error('deleteMe error:', err);
         res.status(500).json({ message: 'Error deleting account' });
@@ -525,7 +530,7 @@ exports.getSystemLogs = async (req, res) => {
     }
 
     try {
-        const adminClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        const adminClient = createClient(process.env.SUPABASE_URL?.trim(), process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
         const { data, error } = await adminClient
             .from('system_logs')
             .select('*')

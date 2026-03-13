@@ -7,14 +7,18 @@
  */
 exports.transcribeAudio = async (audioPath) => {
     try {
-        console.log(`Transcribing audio: ${audioPath}`);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`Transcribing audio: ${audioPath}`);
+        }
 
         // SIMULATION LOGIC:
         // In a real app, you'd send this file to an STT API.
         // For this project, we return a predictable string to demonstrate flow.
         return new Promise((resolve) => {
             setTimeout(() => {
-                console.log('Transcription Complete.');
+                if (process.env.NODE_ENV !== 'production') {
+                    console.log('Transcription Complete.');
+                }
                 // Enhanced simulation: Return "Hello" if it's likely the "Say Hello" question
                 // or if we just want to pass the test for demonstration.
                 // In a debug mode, we could check the file name or a global flag.

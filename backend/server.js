@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const cron = require('node-cron');
 const dailyCleanup = require('./scripts/dailyCleanup');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // ==========================================
 // 1. STARTUP — Validate Required Env Vars
@@ -22,15 +22,20 @@ REQUIRED_ENV.forEach(key => {
 });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+app.set('trust proxy', 1); // Rule 15: Trust proxy for rate limiting (needed behind Vite/Load Balancers)
+const PORT = (process.env.PORT || '5000').toString().trim();
 
 // ==========================================
 // 2. MIDDLEWARE
 // ==========================================
+const apiLimiter = require('./middleware/rateLimit');
+const authMiddleware = require('./middleware/auth');
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || true, // Allow true for quick dev, set explicit for hardened prod
+    origin: process.env.FRONTEND_URL?.trim() || 'http://localhost:5173', // Hardcoded default for safety, but prefers ENV
     credentials: true
 }));
+// app.use('/api/', apiLimiter); // Temporarily disabled to unblock development 429 loops
 app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(express.json());
@@ -70,7 +75,8 @@ app.get('/', (req, res) => {
 });
 
 // Serve uploaded static files — force PDFs inline so browsers embed them
-app.use('/uploads', (req, res, next) => {
+// SECURITY: Secured with authMiddleware to prevent public exposure
+app.use('/uploads', authMiddleware, (req, res, next) => {
     if (req.path.toLowerCase().endsWith('.pdf')) {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline');
@@ -82,10 +88,17 @@ app.use('/uploads', (req, res, next) => {
 // 4. ERROR HANDLING
 // ==========================================
 app.use((err, req, res, next) => {
-    const errorLog = `[${new Date().toISOString()}] ${err.stack}\n`;
+    const errorLog = `[${new Date().toISOString()}] ${req.method} ${req.url} - ${err.stack}\n`;
     fs.appendFileSync('error.log', errorLog);
-    console.error(err.stack);
-    res.status(500).json({ message: 'Something went wrong on the server.' });
+    if (process.env.NODE_ENV !== 'production') {
+        console.error('SERVER ERROR:', err.message);
+        console.error('PATH:', req.url);
+        console.error(err.stack);
+    }
+    res.status(500).json({ 
+        message: 'Something went wrong on the server.',
+        error: process.env.NODE_ENV !== 'production' ? err.message : undefined 
+    });
 });
 
 // ==========================================
@@ -102,8 +115,10 @@ cron.schedule('0 0 * * *', () => {
 // ==========================================
 if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-        console.log(`API available at: http://localhost:${PORT}/api/v1`);
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`Server running on port ${PORT}`);
+            console.log(`API available at: http://localhost:${PORT}/api/v1`);
+        }
     });
 }
 

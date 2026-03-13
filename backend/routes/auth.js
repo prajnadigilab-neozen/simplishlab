@@ -4,6 +4,7 @@ const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/auth');
 const isSuperAdmin = require('../middleware/isSuperAdmin');
 const upload = require('../middleware/upload');
+const validateFile = require('../middleware/validateFile');
 
 // Public — both /register and /signup work so old clients don't break
 router.post('/register', authController.register);
@@ -13,7 +14,7 @@ router.post('/logout', authMiddleware, authController.logout);
 
 // Protected
 router.get('/profile', authMiddleware, authController.getProfile);
-router.put('/profile', authMiddleware, upload.single('avatar'), authController.updateProfile);
+router.put('/profile', authMiddleware, upload.single('avatar'), validateFile, authController.updateProfile);
 router.delete('/me', authMiddleware, authController.deleteMe);
 
 // Admin & Moderator
